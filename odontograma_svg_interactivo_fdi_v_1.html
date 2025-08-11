@@ -550,9 +550,9 @@
     }
     window.getActiveDentitionState = function(){ return JSON.parse(JSON.stringify(state[state.dentition])); }
     window.getPerioSummary = function(){ return computePerioSummary(); }
-    window.setOdontogramaState = function(newState){ setOdontogramaState(newState); }
+    window.setOdontogramaState = function(newState){ try { __odontoApplyState(newState); } catch (e) { console.error("[ODONTO] apply error:", e); } }
 
-    function setOdontogramaState(newState){
+    function __odontoApplyState(newState){
       if(!newState) return;
       // Merge superficial
       if(newState.dentition) state.dentition = newState.dentition;
