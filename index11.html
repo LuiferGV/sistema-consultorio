@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema - Dental Molas</title>
+
+  <!-- Libs -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
+  <script>dayjs.extend(dayjs_plugin_utc); dayjs.extend(dayjs_plugin_timezone);</script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <!-- Chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root { --bg:#0b1320; --card:#101a2c; --muted:#9fb0c7; --accent:#2bd4a6; --accent-2:#18a37f; --danger:#ff6b6b; }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:linear-gradient(180deg,#0a1426,#08101d 40%,#08101d);color:#e9f0f8}
+    .wrap{max-width:1100px;margin:0 auto;padding:28px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .title{font-size:clamp(18px,2.6vw,26px);font-weight:700;letter-spacing:.2px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:9px 14px;border-radius:12px;background:#0f1a2e;border:1px solid #1e3357;color:#cfe3ff;cursor:pointer}
+    .tab.active{background:var(--accent);color:#06231b;border-color:transparent;font-weight:700}
+    .card{background:var(--card);border:1px solid #1e3357;border-radius:18px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    form .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select,textarea{width:100%;background:#0f1a2e;color:#e9f0f8;border:1px solid #1f3254;border-radius:12px;padding:10px 12px;outline:none}
+    textarea{min-height:80px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{appearance:none;background:var(--accent);color:#06231b;border:none;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+    button.secondary{background:#0f1a2e;color:#cfe3ff;border:1px solid #1f3254}
+    .row{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:980px){.row{grid-template-columns:1.2fr .8fr}}
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .kpi .item{background:#0f1a2e;border:1px solid #203456;padding:12px 14px;border-radius:14px}
+    .kpi .item .h{font-size:12px;color:var(--muted)}
+    .kpi .item .v{font-size:22px;font-weight:700;margin-top:4px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border-bottom:1px solid #1f3254;padding:10px 8px;text-align:left;font-size:14px}
+    .table tr.sel{outline:2px solid var(--accent)}
+    .hint{color:var(--muted);font-size:12px}
+    .footer{margin-top:18px;color:var(--muted);font-size:12px}
+    .pill{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:6px 10px;border:1px solid #1f3254;border-radius:999px;background:#0f1a2e}
+    #searchPaciente{min-width:240px;padding:6px;border-radius:8px;border:1px solid #1f3254;background:#0f1a2e;color:#e9f0f8;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">Sistema - Dental Molas</div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="registro">Registro</button>
+        <button class="tab" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="config">Config</button>
+      </nav>
+    </header>
+
+    <!-- REGISTRO -->
+    <section id="registro" class="card">
+      <form id="form-registro">
+        <div class="grid">
+          <div>
+            <label>Paciente *</label>
+            <input id="paciente" required placeholder="Nombre y apellido" />
+          </div>
+          <div>
+            <label>Nº Historia (auto)</label>
+            <input id="historia" placeholder="Se asigna automáticamente" disabled />
+          </div>
+          <div>
+            <label>Fecha de atención</label>
+            <input id="fecha" type="date" />
+          </div>
+          <div>
+            <label>Profesional</label>
+            <input id="profesional" placeholder="Operador" value="Dr. Luis F. González" />
+          </div>
+          <div>
+            <label>Intervalo de mantenimiento</label>
+            <select id="intervalo">
+              <option value="1">1 mes</option>
+              <option value="3" selected>3 meses</option>
+              <option value="6">6 meses</option>
+            </select>
+          </div>
+          <div>
+            <label>Recordatorio para contactar (calculado)</label>
+            <input id="prox" placeholder="Se calcula con el intervalo" disabled />
+          </div>
+          <div style="grid-column:1/-1">
+            <label>Notas</label>
+            <textarea id="notas" placeholder="Observaciones…"></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit">Guardar</button>
+          <button type="button" id="btn-limpiar" class="secondary">Limpiar</button>
+          <span class="hint">Solo el campo "Paciente" es obligatorio. Historia se autogenera.</span>
+        </div>
+      </form>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="card" style="display:none">
+      <div class="row">
+        <div>
+          <div class="kpi" id="kpis">
+            <div class="item"><div class="h">Atendidos (semana)</div><div class="v" id="kpiSemana">0</div></div>
+            <div class="item"><div class="h">Atendidos (mes)</div><div class="v" id="kpiMes">0</div></div>
+            <div class="item"><div class="h">Atendidos (año)</div><div class="v" id="kpiAnio">0</div></div>
+            <div class="item"><div class="h">Recordatorios (mes)</div><div class="v" id="kpiProxMes">0</div></div>
+          </div>
+          <canvas id="chartMes" height="120" style="margin-top:16px"></canvas>
+        </div>
+        <div>
+          <div class="pill" style="margin-bottom:10px;">
+            <span>Filtrar por mes:&nbsp;</span>
+            <input type="month" id="filtroMes" />
+            <span>Mostrar: </span>
+            <select id="modoTabla">
+              <option value="atendidos">Atendidos</option>
+              <option value="proximas">Recordatorios</option>
+            </select>
+            <input type="text" id="searchPaciente" placeholder="Buscar (paciente, historia, profesional, notas)" />
+          </div>
+          <table class="table" id="tabla">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Paciente</th><th>Historia</th><th>Profesional</th><th>Intervalo</th><th>Recordatorio</th><th>Notas</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="actions">
+            <button id="btn-export">Exportar CSV</button>
+            <button id="btn-ics" class="secondary">Add Calendar</button>
+            <button id="btn-borrar" class="secondary" style="border-color:#7a2b2b;color:#ffdede">Borrar seleccionado</button>
+          </div>
+          <div class="hint">Selecciona una fila para crear un .ics o borrar.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONFIG (solo referencia visual) -->
+    <section id="config" class="card" style="display:none">
+      <p><strong>1) Configura Firebase</strong></p>
+      <pre id="cfg" style="white-space:pre-wrap;background:#0f1a2e;border:1px solid #203456;border-radius:12px;padding:12px;overflow:auto">const firebaseConfig = {
+  apiKey: "AIzaSyB4v68jvnlVrprM4n4A23fv23OKiby_Kqq8",
+  authDomain: "sistema-consultorio-53424.firebaseapp.com",
+  databaseURL: "https://sistema-consultorio-53424-default-rtdb.firebaseio.com/",
+  projectId: "sistema-consultorio-53424",
+  storageBucket: "sistema-consultorio-53424.appspot.com",
+  messagingSenderId: "701715985597",
+  appId: "1:701715985597:web:91c80fdd071edb71d433d4"
+};</pre>
+    </section>
+
+    <div class="footer">Dental Molas - Todos los Derechos Reservados - Creado por LuiferGV</div>
+  </div>
+
+  <script>
+    // ---------------- CONFIG FIREBASE ----------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyB4v68jvnlVrprM4n4A23fv23OKiby_Kqq8",
+      authDomain: "sistema-consultorio-53424.firebaseapp.com",
+      databaseURL: "https://sistema-consultorio-53424-default-rtdb.firebaseio.com/",
+      projectId: "sistema-consultorio-53424",
+      storageBucket: "sistema-consultorio-53424.appspot.com",
+      messagingSenderId: "701715985597",
+      appId: "1:701715985597:web:91c80fdd071edb71d433d4"
+    };
+
+    let app, db;
+    try {
+      app = firebase.initializeApp(firebaseConfig);
+      db  = firebase.database();
+      window.app = app; window.db = db;
+      console.log('Firebase OK');
+    } catch (e) { console.error('Error inicializando Firebase:', e); }
+
+    // ---------------- UI TABS ----------------
+    const tabs = document.querySelectorAll('.tab');
+    const views = { registro: document.getElementById('registro'), dashboard: document.getElementById('dashboard'), config: document.getElementById('config') };
+    tabs.forEach(t=>t.addEventListener('click',()=>{
+      tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active');
+      Object.values(views).forEach(v=>v.style.display='none');
+      views[t.dataset.tab].style.display='block';
+      if (t.dataset.tab==='dashboard') cargarDatos();
+    }));
+
+    // ---------------- HELPERS ----------------
+    const $ = (id)=>document.getElementById(id);
+    const esc = (s)=> (s??'').toString().replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+    // ---------------- REGISTRO ----------------
+    const form = $('form-registro');
+    $('fecha').value = dayjs().format('YYYY-MM-DD');
+
+    // Recordatorio (no la cita): 1m→+21d, 3m→+2m+21d, 6m→+5m+21d
+    function calcProx(){
+      const fechaBase = $('fecha').value || dayjs().format('YYYY-MM-DD');
+      const intervalo = Number(($('intervalo').value) || 3);
+      const map = { 1:{m:0,d:21}, 3:{m:2,d:21}, 6:{m:5,d:21} };
+      const off = map[intervalo] || map[3];
+      const recordatorio = dayjs(fechaBase).add(off.m,'month').add(off.d,'day').format('YYYY-MM-DD');
+      $('prox').value = recordatorio;
+      return recordatorio;
+    }
+    calcProx();
+    $('fecha').addEventListener('change', calcProx);
+    $('intervalo').addEventListener('change', calcProx);
+
+    $('btn-limpiar').onclick = ()=>{
+      form.reset();
+      $('fecha').value = dayjs().format('YYYY-MM-DD');
+      calcProx();
+    };
+
+    async function nextHistoria(){
+      const ref = db.ref('meta/contador');
+      const snap = await ref.get();
+      if (!snap.exists()) await ref.set(0);
+      await ref.transaction(curr => (curr||0)+1);
+      const snap2 = await ref.get();
+      return snap2.val();
+    }
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      try{
+        if (!db) { alert('Configura Firebase en la pestaña Config.'); return; }
+        const historia = await nextHistoria();
+        const fechaISO = $('fecha').value || dayjs().format('YYYY-MM-DD');
+        const proximaISO = calcProx(); // fecha de recordatorio
+        const payload = {
+          fechaISO,
+          ts: dayjs(fechaISO).valueOf(),
+          paciente: $('paciente').value.trim(),
+          historia: Number(historia),
+          profesional: $('profesional').value.trim(),
+          intervaloMes: Number($('intervalo').value||3),
+          proximaISO,
+          proximaTS: dayjs(proximaISO).valueOf(),
+          notas: $('notas').value.trim()
+        };
+        const ref = db.ref('profilaxis').push();
+        await ref.set(payload);
+        $('historia').value = historia;
+        alert('Registro guardado');
+        form.reset();
+        $('profesional').value = 'Dr. Luis F. González';
+        $('fecha').value = dayjs().format('YYYY-MM-DD');
+        calcProx();
+      } catch(err){
+        console.error('Error al guardar:', err);
+        alert('No se pudo guardar. Revisa la consola.');
+      }
+    });
+
+    // ---------------- DASHBOARD ----------------
+    let chart; let seleccionId=null; let seleccionObj=null;
+
+    async function cargarDatos(){
+      if (!db) return;
+
+      const snap = await db.ref('profilaxis').get();
+      const data = snap.exists()? snap.val() : {};
+      const arrAll = Object.entries(data).map(([id,v])=>({id,...v})).sort((a,b)=>a.ts-b.ts);
+
+      // KPIs (no dependen del buscador)
+      const hoy = dayjs();
+      const inicioSemana = hoy.startOf('week');
+      const inicioMes = hoy.startOf('month');
+      const inicioAnio = hoy.startOf('year');
+
+      $('kpiSemana').textContent = arrAll.filter(r=> dayjs(r.fechaISO).isAfter(inicioSemana.subtract(1,'day'))).length;
+      $('kpiMes').textContent    = arrAll.filter(r=> dayjs(r.fechaISO).isAfter(inicioMes.subtract(1,'day'))).length;
+      $('kpiAnio').textContent   = arrAll.filter(r=> dayjs(r.fechaISO).isAfter(inicioAnio.subtract(1,'day'))).length;
+      $('kpiProxMes').textContent= arrAll.filter(r=> dayjs(r.proximaISO).format('YYYY-MM')===hoy.format('YYYY-MM')).length;
+
+      // Filtro por mes + modo
+      const ymSel = $('filtroMes').value || dayjs().format('YYYY-MM');
+      $('filtroMes').value = ymSel;
+
+      const modo = $('modoTabla').value;
+      let arrMes = (modo==='atendidos')
+        ? arrAll.filter(r=> dayjs(r.fechaISO).format('YYYY-MM')===ymSel)
+        : arrAll.filter(r=> dayjs(r.proximaISO).format('YYYY-MM')===ymSel);
+
+      // Filtro por texto (paciente, historia, profesional, notas)
+      const searchInput = $('searchPaciente');
+      const q = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
+      if (q) {
+        arrMes = arrMes.filter(r=>{
+          return (r.paciente||'').toLowerCase().includes(q)
+              || String(r.historia||'').includes(q)
+              || (r.profesional||'').toLowerCase().includes(q)
+              || (r.notas||'').toLowerCase().includes(q);
+        });
+      }
+
+      // Tabla
+      const tbody = document.querySelector('#tabla tbody');
+      tbody.innerHTML = '';
+      seleccionId=null; seleccionObj=null;
+      arrMes.forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.fechaISO}</td><td>${esc(r.paciente)}</td><td>${r.historia}</td><td>${esc(r.profesional||'')}</td><td>${r.intervaloMes}m</td><td>${r.proximaISO||''}</td><td>${esc(r.notas||'')}</td>`;
+        tr.onclick = ()=>{[...tbody.children].forEach(x=>x.classList.remove('sel')); tr.classList.add('sel'); seleccionId=r.id; seleccionObj=r;};
+        tbody.appendChild(tr);
+      });
+
+      // Gráfico: atendidos por día del mes seleccionado (no se filtra por buscador)
+      const byDay = {};
+      arrAll.filter(r=> dayjs(r.fechaISO).format('YYYY-MM')===ymSel).forEach(r=>{ byDay[r.fechaISO]=(byDay[r.fechaISO]||0)+1; });
+      const labels = Object.keys(byDay).sort();
+      const serie = labels.map(d=> byDay[d]);
+
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById('chartMes'),{
+        type:'bar',
+        data:{ labels, datasets:[ {label:'Atendidos por día', data:serie} ] },
+        options:{ responsive:true, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 }}}}
+      });
+    }
+
+    $('filtroMes').addEventListener('change', cargarDatos);
+    $('modoTabla').addEventListener('change', cargarDatos);
+    (function(){
+      const si = $('searchPaciente');
+      if (si) si.addEventListener('input', cargarDatos);
+    })();
+
+    $('btn-export').onclick = ()=>{
+      if (!db){ alert('Configura Firebase'); return; }
+      exportCSV();
+    };
+
+    $('btn-borrar').onclick = async ()=>{
+      if (!db){ alert('Configura Firebase'); return; }
+      if (!seleccionId){ alert('Selecciona una fila'); return; }
+      if (!confirm('¿Borrar el registro seleccionado?')) return;
+      await db.ref('profilaxis/'+seleccionId).remove();
+      seleccionId=null; seleccionObj=null; cargarDatos();
+    };
+
+    // Abrir .ics directo (iPhone/iPad abre Calendario nativo)
+    $('btn-ics').onclick = ()=>{
+      if (!seleccionObj){ alert('Selecciona una fila'); return; }
+      const ics = generarICS(seleccionObj);
+      const dataUrl = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+      window.location.href = dataUrl;
+    };
+
+    function exportCSV(){
+      db.ref('profilaxis').get().then(snap=>{
+        const data = snap.exists()? snap.val() : {};
+        const rows = [['fechaISO','paciente','historia','profesional','intervaloMes','proximaISO','notas']];
+        Object.values(data).forEach(r=>{
+          rows.push([
+            r.fechaISO || '',
+            r.paciente || '',
+            r.historia || '',
+            r.profesional || '',
+            r.intervaloMes || '',
+            r.proximaISO || '',
+            String(r.notas || '').replace(/\n/g,' ')
+          ]);
+        });
+        const csv = rows.map(cols=> cols.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = 'profilaxis_mantenimiento.csv'; a.click();
+      });
+    }
+
+    function generarICS(r){
+      const dtStart = dayjs(r.proximaISO || r.fechaISO).hour(9).minute(0).second(0); // 09:00
+      const dtEnd = dtStart.add(30,'minute');
+      const fmt = d => d.utc().format("YYYYMMDD[T]HHmmss[Z]");
+      const uid = `${r.id || 'evt'}@perio-verse`;
+      const safe = s => String(s || '').replace(/[\n,]/g,' ');
+      const lines = [
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PerioVerse//Mantenimiento//ES',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${fmt(dayjs())}`,
+        `DTSTART:${fmt(dtStart)}`,
+        `DTEND:${fmt(dtEnd)}`,
+        'SUMMARY:Mantenimiento periodontal – Profilaxis',
+        `DESCRIPTION:Paciente: ${safe(r.paciente)}\\nHistoria: ${safe(r.historia)}\\nProfesional: ${safe(r.profesional)}\\nNotas: ${safe(r.notas)}`,
+        'END:VEVENT','END:VCALENDAR'
+      ];
+      return lines.join('\n');
+    }
+  </script>
+</body>
+</html>

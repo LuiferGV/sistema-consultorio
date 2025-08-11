@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dental Molas - Sistema de Pacientes - Periodoncia</title>
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body class="force-light">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <img src="logoprincipal.png" alt="Dental Molas" class="brand-logo"/>
+        <h1 class="brand-title">Sistema de Pacientes - Periodoncia</h1>
+      </div>
+      <div class="header-actions">
+        <button id="btnDashboard" class="btn btn-outline-light">
+          <i class="fa-solid fa-chart-line me-1"></i> Dashboard
+        </button>
+        <button id="btnAgregar" class="btn btn-light text-dark">
+          <i class="fa-solid fa-user-plus me-1"></i> Agregar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Buscador -->
+  <main class="container py-4">
+    <div class="mb-3">
+      <input id="searchMain" class="form-control search" placeholder="Buscar paciente por nombre o teléfono" autocomplete="off" />
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Total</span><span id="counterTotal" class="kpi">0</span></div></div></div>
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Con recordatorio</span><span id="counterConRec" class="kpi">0</span></div></div></div>
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Próx. 7 días</span><span id="counterProx7" class="kpi">0</span></div></div></div>
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Vencidos</span><span id="counterVencidos" class="kpi">0</span></div></div></div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-responsive">
+      <table class="table table-hover align-middle" id="tablaPacientes">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Mantenimiento</th>
+            <th>Recordatorio</th>
+            <th style="width:190px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody><!-- filas dinámicas --></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal Agregar/Editar -->
+  <div class="modal fade" id="modalPaciente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Agregar Paciente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formPaciente" autocomplete="off">
+            <div class="mb-3">
+              <label class="form-label">Nombre</label>
+              <input type="text" class="form-control" id="nombre" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Teléfono</label>
+              <div class="input-group">
+                <span class="input-group-text">595</span>
+                <input type="tel" class="form-control" id="telefono" placeholder="Ej.: 981885999" inputmode="numeric" required>
+              </div>
+              <div class="form-text">Escribe el número <b>sin 0 ni 595</b>. Ej.: 981885999.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Fecha de ingreso</label>
+              <!-- Por defecto HOY (lo setea app.js) pero editable para históricos -->
+              <input type="date" class="form-control" id="fechaBase">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Frecuencia de mantenimiento</label>
+              <select class="form-select" id="mantenimiento" required>
+                <option value="1">1 mes</option>
+                <option value="3">3 meses</option>
+                <option value="6">6 meses</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Fecha Recordatorio</label>
+              <input type="text" class="form-control" id="fechaRecordatorioDDMMAAAA" readonly>
+              <input type="hidden" id="fechaRecordatorioISO">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Hora Recordatorio</label>
+              <input type="time" class="form-control" id="horaRecordatorio" value="09:00">
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <!-- Importante: este botón NO lleva data-bs-dismiss -->
+          <button type="button" class="btn btn-brand" id="guardarPaciente">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="modal fade" id="modalDashboard" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Dashboard</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Total</span><span id="kpiTotal" class="kpi">0</span></div></div></div>
+            <div class="col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Con recordatorio</span><span id="kpiConRec" class="kpi">0</span></div></div></div>
+            <div class="col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Próx. 7 días</span><span id="kpiProx7" class="kpi">0</span></div></div></div>
+            <div class="col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Vencidos</span><span id="kpiVencidos" class="kpi">0</span></div></div></div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6"><div class="card"><div class="card-header">Distribución por mantenimiento</div><div class="card-body"><canvas id="chartMantenimiento"></canvas></div></div></div>
+            <div class="col-md-6"><div class="card"><div class="card-header">Altas (últimos 6 meses)</div><div class="card-body"><canvas id="chartAltas"></canvas></div></div></div>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS (Bootstrap primero; TU app después como MÓDULO) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
