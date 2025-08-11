@@ -1,6 +1,5 @@
 // Dental Molas - Sistema de Pacientes - Periodoncia
-// Firebase + CRUD + Buscador + KPIs + Dashboard + iCal + Fecha base + tiempo real
-// v1.1.0 — WhatsApp link + prefijo 595 en formulario
+// v1.1.2 — Persistencia odontograma: guarda en Firebase + cache local, carga robusta
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
@@ -11,8 +10,8 @@ import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
 
 // ---- FLAGS (anti-regresión) ----
 window.FEATURES = Object.assign({
-  whatsappLink:  true,  // icono y link wa.me en la tabla
-  phonePrefix595: true, // formulario usa prefijo fijo 595
+  whatsappLink:   true,
+  phonePrefix595: true,
   debounceSearch: false,
   toastMessages:  false,
   uniquePhone:    false,
@@ -21,7 +20,8 @@ window.FEATURES = Object.assign({
   notifyToday:    false,
   spinners:       false
 }, window.FEATURES || {});
-const APP_VERSION = 'v1.1.0';
+const APP_VERSION = 'v1.1.2';
+const ODONTO_URL  = 'odontograma_svg_interactivo_fdi_v_1.html'; // debe existir en la raíz
 
 // ===== Firebase =====
 const firebaseConfig = {
@@ -35,7 +35,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
-console.log(`[APP ${APP_VERSION}]`, app.options.projectId, app.options.databaseURL);
+console.log(`[APP ${APP_VERSION}]`, app.options.projectId);
 
 // ===== DOM =====
 const tablaBody        = document.querySelector('#tablaPacientes tbody');
@@ -50,7 +50,14 @@ const guardarBtn       = document.getElementById('guardarPaciente');
 const fechaBase        = document.getElementById('fechaBase');
 const modalPacienteEl  = document.getElementById('modalPaciente');
 
-// Instancia única del modal
+// Modal Odontograma
+const modalOdontoEl    = document.getElementById('modalOdonto');
+const modalOdonto      = new bootstrap.Modal(modalOdontoEl);
+const odontoFrame      = document.getElementById('odontoFrame');
+const odontoNoFile     = document.getElementById('odontoNoFile');
+const guardarOdontoBtn = document.getElementById('guardarOdonto');
+
+// Instancia única del modal de paciente
 const modalPaciente = new bootstrap.Modal(modalPacienteEl);
 modalPacienteEl.addEventListener('shown.bs.modal', () => {
   document.getElementById('nombre')?.focus();
@@ -59,6 +66,8 @@ modalPacienteEl.addEventListener('shown.bs.modal', () => {
 // ===== Estado =====
 const pacientesMap = new Map();   // id -> paciente
 let editId = null;
+let odontoIdActual = null;
+let odontoReady = false;
 
 // ===== Helpers =====
 const toISO = (d)=> d.toISOString().split('T')[0];
@@ -80,12 +89,12 @@ function actualizarRecordatorio() {
 mantenimientoSel.addEventListener('change', actualizarRecordatorio);
 fechaBase.addEventListener('change', actualizarRecordatorio);
 
+// Teléfonos / WhatsApp
 const ONLY_DIGITS = s => (s||'').replace(/\D/g,'');
 const splitLocalFromStored = (phone) => {
   const d = ONLY_DIGITS(phone);
   if (d.startsWith('595')) return d.slice(3);
   if (d.startsWith('0'))   return d.slice(1);
-  // si tiene más de 9, nos quedamos con los últimos 9 (ej. +595... o 0981...)
   return d.length > 9 ? d.slice(-9) : d;
 };
 const toWaNumber = (stored) => {
@@ -97,21 +106,11 @@ const toWaNumber = (stored) => {
   return d;
 };
 
-// ===== Carga en tiempo real granular =====
+// ===== RTDB =====
 const pacientesRef = ref(db, 'pacientes');
-
-onChildAdded(pacientesRef, (snap) => {
-  pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() });
-  renderAll();
-});
-onChildChanged(pacientesRef, (snap) => {
-  pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() });
-  renderAll();
-});
-onChildRemoved(pacientesRef, (snap) => {
-  pacientesMap.delete(snap.key);
-  renderAll();
-});
+onChildAdded(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() }); renderAll(); });
+onChildChanged(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() }); renderAll(); });
+onChildRemoved(pacientesRef, (snap) => { pacientesMap.delete(snap.key); renderAll(); });
 
 // ===== Render =====
 function snapshotToArray() { return Array.from(pacientesMap.values()); }
@@ -131,7 +130,6 @@ function renderTable() {
     const tr = document.createElement('tr');
     const hora = p.horaRecordatorio ? ` ${p.horaRecordatorio}` : '';
 
-    // Teléfono mostrado y link de WhatsApp
     const telRaw = p.telefono || '';
     const telDigits = ONLY_DIGITS(telRaw);
     const waDigits = window.FEATURES.whatsappLink ? toWaNumber(telRaw) : '';
@@ -148,6 +146,9 @@ function renderTable() {
       <td>${p.fechaRecordatorio ? toDDMMAAAA(p.fechaRecordatorio) : '-'}${hora}</td>
       <td>
         <div class="d-flex gap-1">
+          <button class="btn btn-primary btn-sm" title="Ver odontograma" data-odonto="${p._id}">
+            <i class="fa-solid fa-tooth"></i>
+          </button>
           <button class="btn btn-info btn-sm"    title="Agregar al Calendario" data-ics="${p._id}"><i class="fa-solid fa-calendar-plus"></i></button>
           <button class="btn btn-warning btn-sm" title="Editar"                data-edit="${p._id}"><i class="fa-solid fa-pen"></i></button>
           <button class="btn btn-danger btn-sm"  title="Eliminar"              data-del="${p._id}"><i class="fa-solid fa-trash"></i></button>
@@ -161,38 +162,96 @@ function actualizarContadores(){
   const hoy = new Date(toISO(new Date()));
   const in7 = new Date(hoy); in7.setDate(in7.getDate()+7);
   const arr = snapshotToArray();
-  const total = arr.length;
-  const conRec = arr.filter(p=>p.fechaRecordatorio).length;
-  const vencidos = arr.filter(p=> p.fechaRecordatorio && new Date(p.fechaRecordatorio) < hoy).length;
-  const prox7 = arr.filter(p=>{ if(!p.fechaRecordatorio) return false; const fr=new Date(p.fechaRecordatorio); return fr>=hoy && fr<=in7; }).length;
-  document.getElementById('counterTotal').textContent = total;
-  document.getElementById('counterConRec').textContent = conRec;
-  document.getElementById('counterProx7').textContent = prox7;
-  document.getElementById('counterVencidos').textContent = vencidos;
+  document.getElementById('counterTotal').textContent = arr.length;
+  document.getElementById('counterConRec').textContent = arr.filter(p=>p.fechaRecordatorio).length;
+  document.getElementById('counterProx7').textContent = arr.filter(p=>{ if(!p.fechaRecordatorio) return false; const fr=new Date(p.fechaRecordatorio); return fr>=hoy && fr<=in7; }).length;
+  document.getElementById('counterVencidos').textContent = arr.filter(p=> p.fechaRecordatorio && new Date(p.fechaRecordatorio) < hoy).length;
 }
 
-function renderAll(){
-  renderTable();
-  actualizarContadores();
-}
+function renderAll(){ renderTable(); actualizarContadores(); }
 
 // ===== Acciones de fila =====
 tablaBody.addEventListener('click', async (e) => {
-  const btnICS  = e.target.closest('[data-ics]');
-  const btnEdit = e.target.closest('[data-edit]');
-  const btnDel  = e.target.closest('[data-del]');
+  const btnOdonto = e.target.closest('[data-odonto]');
+  const btnICS    = e.target.closest('[data-ics]');
+  const btnEdit   = e.target.closest('[data-edit]');
+  const btnDel    = e.target.closest('[data-del]');
 
-  if (btnICS) {
-    const id = btnICS.getAttribute('data-ics');
-    const p = pacientesMap.get(id);
-    if (p) downloadICS(p);
-  }
-  if (btnEdit) openEdit(btnEdit.getAttribute('data-edit'));
+  if (btnOdonto) openOdonto(btnOdonto.getAttribute('data-odonto'));
+  if (btnICS)    { const p = pacientesMap.get(btnICS.getAttribute('data-ics')); if (p) downloadICS(p); }
+  if (btnEdit)   openEdit(btnEdit.getAttribute('data-edit'));
   if (btnDel) {
     const id = btnDel.getAttribute('data-del');
     if (!confirm('¿Eliminar este paciente?')) return;
     try { await remove(ref(db, 'pacientes/' + id)); }
     catch (e) { alert('No se pudo eliminar: ' + (e?.message || e)); }
+  }
+});
+
+// ===== Odontograma (modal aparte) =====
+async function openOdonto(id){
+  const p = pacientesMap.get(id);
+  if (!p) return;
+  odontoIdActual = id;
+  odontoReady = false;
+
+  modalOdontoEl.querySelector('.modal-title').textContent = `Odontograma — ${p.nombre ?? ''}`;
+
+  odontoNoFile.classList.add('d-none');
+  odontoFrame.style.display = 'none';
+
+  try {
+    // Verificamos existencia
+    const head = await fetch(ODONTO_URL, { method:'HEAD', cache:'no-store' });
+    if (!head.ok) throw new Error('404');
+
+    // Carga iframe y al terminar, inyecta el estado guardado
+    odontoFrame.src = `${ODONTO_URL}?t=${Date.now()}`;
+    odontoFrame.onload = () => {
+      odontoReady = true;
+      try {
+        if (odontoFrame.contentWindow?.setOdontogramaState) {
+          odontoFrame.contentWindow.setOdontogramaState(p.odontograma || null);
+          console.log('[ODONTO] estado aplicado para', p.nombre);
+        }
+      } catch(e){ console.warn('[ODONTO] set state error:', e); }
+      odontoFrame.style.display = 'block';
+    };
+  } catch (e) {
+    odontoNoFile.innerHTML = `
+      <b>No encuentro <code>${ODONTO_URL}</code></b> en tu hosting.<br>
+      Subí el archivo a la raíz y probá abrir: <code>/${ODONTO_URL}</code>.
+    `;
+    odontoNoFile.classList.remove('d-none');
+  }
+
+  modalOdonto.show();
+}
+
+guardarOdontoBtn.addEventListener('click', async () => {
+  if (!odontoIdActual) return;
+  const p = pacientesMap.get(odontoIdActual);
+  if (!p) return;
+
+  try {
+    if (!odontoReady || !odontoFrame.contentWindow?.getOdontogramaState) {
+      alert('El odontograma aún no terminó de cargar. Volvé a intentar en 1 segundo.');
+      return;
+    }
+    const state = odontoFrame.contentWindow.getOdontogramaState();
+    console.log('[ODONTO] guardando...', odontoIdActual, state);
+
+    // 1) Guardar en Firebase
+    await update(ref(db, 'pacientes/' + odontoIdActual), { odontograma: state });
+
+    // 2) Actualizar cache local (para reabrir al instante)
+    pacientesMap.set(odontoIdActual, { ...p, odontograma: state });
+    renderAll();
+
+    modalOdonto.hide();
+  } catch (e) {
+    console.error('[ODONTO] error guardando', e);
+    alert('No se pudo guardar el odontograma: ' + (e?.message || e));
   }
 });
 
@@ -202,11 +261,8 @@ function openEdit(id) {
   if (!p) return;
   editId = id;
   document.getElementById('nombre').value   = p.nombre || '';
-
-  // Mostrar en el input SOLO la parte local (sin 595)
-  const local = window.FEATURES.phonePrefix595 ? splitLocalFromStored(p.telefono) : ONLY_DIGITS(p.telefono);
+  const local = splitLocalFromStored(p.telefono);
   document.getElementById('telefono').value = local || '';
-
   mantenimientoSel.value = String(p.mantenimiento || 1);
   fechaBase.value = p.fechaBase || toISO(new Date());
   const iso = p.fechaRecordatorio || calcularRecordatorio(parseInt(mantenimientoSel.value,10), fechaBase.value);
@@ -228,7 +284,7 @@ btnAgregar.addEventListener('click', () => {
   modalPaciente.show();
 });
 
-// ===== Guardar =====
+// ===== Guardar ficha =====
 guardarBtn.addEventListener('click', async () => {
   const nombre = document.getElementById('nombre').value.trim();
   const telLocal = ONLY_DIGITS(document.getElementById('telefono').value);
@@ -246,8 +302,7 @@ guardarBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Construir teléfono FULL con 595
-  const telefonoFull = window.FEATURES.phonePrefix595 ? ('595' + telLocal) : telLocal;
+  const telefonoFull = '595' + telLocal;
 
   const payload = {
     nombre,
@@ -265,14 +320,12 @@ guardarBtn.addEventListener('click', async () => {
       await push(ref(db, 'pacientes'), { ...payload, createdAt: Date.now() });
     }
 
-    // Cierre limpio del modal y refresh visual inmediato
     document.activeElement?.blur();
     requestAnimationFrame(() => modalPaciente.hide());
     searchMain.value = '';
     renderAll();
     editId = null;
   } catch (e) {
-    console.error('[GUARDAR] error:', e);
     alert('No se pudo guardar: ' + (e?.message || e));
   }
 });
