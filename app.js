@@ -1,5 +1,6 @@
 // Dental Molas - Sistema de Pacientes - Periodoncia
-// v1.1.2 — Persistencia odontograma: guarda en Firebase + cache local, carga robusta
+// v1.1.5 — Dark mode forzado + filtro chips + Dx Encía en tabla + Dashboard con gráfico Dx
+// Mantiene: WhatsApp, prefijo 595, CRUD, .ics, KPIs, buscador, odontograma persistente
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
@@ -8,20 +9,13 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
 
-// ---- FLAGS (anti-regresión) ----
+// FEATURES
 window.FEATURES = Object.assign({
   whatsappLink:   true,
   phonePrefix595: true,
-  debounceSearch: false,
-  toastMessages:  false,
-  uniquePhone:    false,
-  exportCSV:      false,
-  quickFilters:   false,
-  notifyToday:    false,
-  spinners:       false
 }, window.FEATURES || {});
-const APP_VERSION = 'v1.1.2';
-const ODONTO_URL  = 'odontograma_svg_interactivo_fdi_v_1.html'; // debe existir en la raíz
+const APP_VERSION = 'v1.1.5';
+const ODONTO_URL  = 'odontograma_svg_interactivo_fdi_v_1.html'; // el archivo que tengas en tu raíz
 
 // ===== Firebase =====
 const firebaseConfig = {
@@ -35,7 +29,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
-console.log(`[APP ${APP_VERSION}]`, app.options.projectId);
+console.log(`[APP ${APP_VERSION}] iniciado`);
 
 // ===== DOM =====
 const tablaBody        = document.querySelector('#tablaPacientes tbody');
@@ -56,6 +50,12 @@ const modalOdonto      = new bootstrap.Modal(modalOdontoEl);
 const odontoFrame      = document.getElementById('odontoFrame');
 const odontoNoFile     = document.getElementById('odontoNoFile');
 const guardarOdontoBtn = document.getElementById('guardarOdonto');
+const dxRadios         = document.querySelectorAll('input[name="dxEncia"]');
+const getDx = () => [...dxRadios].find(r => r.checked)?.value || 'sano';
+const setDx = (v) => dxRadios.forEach(r => r.checked = (r.value === (v || 'sano')));
+
+// Dashboard modal
+const modalDashboardEl = document.getElementById('modalDashboard');
 
 // Instancia única del modal de paciente
 const modalPaciente = new bootstrap.Modal(modalPacienteEl);
@@ -64,7 +64,7 @@ modalPacienteEl.addEventListener('shown.bs.modal', () => {
 });
 
 // ===== Estado =====
-const pacientesMap = new Map();   // id -> paciente
+const pacientesMap = new Map();
 let editId = null;
 let odontoIdActual = null;
 let odontoReady = false;
@@ -112,18 +112,44 @@ onChildAdded(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.ke
 onChildChanged(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() }); renderAll(); });
 onChildRemoved(pacientesRef, (snap) => { pacientesMap.delete(snap.key); renderAll(); });
 
+// ===== Filtro Dx =====
+const filterDxGroup = document.getElementById('filterDx');
+let currentDxFilter = '';
+if (filterDxGroup) {
+  // estilo inicial: "Todos" activo
+  [...filterDxGroup.querySelectorAll('button')][0]?.classList.add('active');
+  filterDxGroup.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-dx]');
+    if (!btn) return;
+    [...filterDxGroup.querySelectorAll('button')].forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDxFilter = btn.getAttribute('data-dx') || '';
+    renderTable();
+  });
+}
+
 // ===== Render =====
 function snapshotToArray() { return Array.from(pacientesMap.values()); }
+
+function dxBadge(p){
+  const dx = p?.odontograma?.diagnosticoEncia;
+  if (!dx) return '<span class="text-muted">—</span>';
+  if (dx === 'sano') return '<span class="badge bg-success">Sano</span>';
+  if (dx === 'gingivitis') return '<span class="badge bg-warning text-dark">Gingivitis</span>';
+  if (dx === 'periodontitis') return '<span class="badge bg-danger">Periodontitis</span>';
+  return `<span class="badge bg-secondary">${dx}</span>`;
+}
 
 function renderTable() {
   const q = (searchMain.value || '').toLowerCase();
   const data = snapshotToArray()
     .filter(p => !q || (p.nombre||'').toLowerCase().includes(q) || (p.telefono||'').toLowerCase().includes(q))
+    .filter(p => !currentDxFilter || (p.odontograma?.diagnosticoEncia || '') === currentDxFilter)
     .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||'', 'es', {sensitivity:'base'}));
 
   tablaBody.innerHTML = '';
   if (!data.length) {
-    tablaBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Sin resultados</td></tr>`;
+    tablaBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Sin resultados</td></tr>`;
     return;
   }
   for (const p of data) {
@@ -143,6 +169,7 @@ function renderTable() {
       <td>${p.nombre ?? ''}</td>
       <td>${telCell}</td>
       <td>${p.mantenimiento ? p.mantenimiento + ' meses' : '-'}</td>
+      <td>${dxBadge(p)}</td>
       <td>${p.fechaRecordatorio ? toDDMMAAAA(p.fechaRecordatorio) : '-'}${hora}</td>
       <td>
         <div class="d-flex gap-1">
@@ -167,7 +194,6 @@ function actualizarContadores(){
   document.getElementById('counterProx7').textContent = arr.filter(p=>{ if(!p.fechaRecordatorio) return false; const fr=new Date(p.fechaRecordatorio); return fr>=hoy && fr<=in7; }).length;
   document.getElementById('counterVencidos').textContent = arr.filter(p=> p.fechaRecordatorio && new Date(p.fechaRecordatorio) < hoy).length;
 }
-
 function renderAll(){ renderTable(); actualizarContadores(); }
 
 // ===== Acciones de fila =====
@@ -188,7 +214,7 @@ tablaBody.addEventListener('click', async (e) => {
   }
 });
 
-// ===== Odontograma (modal aparte) =====
+// ===== Odontograma (modal) =====
 async function openOdonto(id){
   const p = pacientesMap.get(id);
   if (!p) return;
@@ -196,24 +222,23 @@ async function openOdonto(id){
   odontoReady = false;
 
   modalOdontoEl.querySelector('.modal-title').textContent = `Odontograma — ${p.nombre ?? ''}`;
+  setDx(p.odontograma?.diagnosticoEncia || 'sano');
 
   odontoNoFile.classList.add('d-none');
   odontoFrame.style.display = 'none';
 
   try {
-    // Verificamos existencia
     const head = await fetch(ODONTO_URL, { method:'HEAD', cache:'no-store' });
     if (!head.ok) throw new Error('404');
 
-    // Carga iframe y al terminar, inyecta el estado guardado
     odontoFrame.src = `${ODONTO_URL}?t=${Date.now()}`;
     odontoFrame.onload = () => {
       odontoReady = true;
       try {
-        if (odontoFrame.contentWindow?.setOdontogramaState) {
-          odontoFrame.contentWindow.setOdontogramaState(p.odontograma || null);
-          console.log('[ODONTO] estado aplicado para', p.nombre);
-        }
+        const state = p.odontograma || null;
+        const fn = odontoFrame.contentWindow?.setOdontogramaState;
+        const looksRecursive = fn && /setOdontogramaState\(newState\)/.test(fn.toString());
+        if (state && fn && !looksRecursive) fn(state);
       } catch(e){ console.warn('[ODONTO] set state error:', e); }
       odontoFrame.style.display = 'block';
     };
@@ -233,29 +258,27 @@ guardarOdontoBtn.addEventListener('click', async () => {
   const p = pacientesMap.get(odontoIdActual);
   if (!p) return;
 
+  let state = {};
   try {
-    if (!odontoReady || !odontoFrame.contentWindow?.getOdontogramaState) {
-      alert('El odontograma aún no terminó de cargar. Volvé a intentar en 1 segundo.');
-      return;
+    if (odontoReady && odontoFrame.contentWindow?.getOdontogramaState) {
+      state = odontoFrame.contentWindow.getOdontogramaState() || {};
     }
-    const state = odontoFrame.contentWindow.getOdontogramaState();
-    console.log('[ODONTO] guardando...', odontoIdActual, state);
+  } catch(e){ console.warn('[ODONTO] get state error', e); }
 
-    // 1) Guardar en Firebase
+  state = (state && typeof state === 'object') ? state : {};
+  state.diagnosticoEncia = getDx();
+
+  try {
     await update(ref(db, 'pacientes/' + odontoIdActual), { odontograma: state });
-
-    // 2) Actualizar cache local (para reabrir al instante)
     pacientesMap.set(odontoIdActual, { ...p, odontograma: state });
     renderAll();
-
     modalOdonto.hide();
   } catch (e) {
-    console.error('[ODONTO] error guardando', e);
     alert('No se pudo guardar el odontograma: ' + (e?.message || e));
   }
 });
 
-// ===== Modal (editar/agregar) =====
+// ===== Modal Agregar/Editar =====
 function openEdit(id) {
   const p = pacientesMap.get(id);
   if (!p) return;
@@ -284,7 +307,7 @@ btnAgregar.addEventListener('click', () => {
   modalPaciente.show();
 });
 
-// ===== Guardar ficha =====
+// Guardar ficha
 guardarBtn.addEventListener('click', async () => {
   const nombre = document.getElementById('nombre').value.trim();
   const telLocal = ONLY_DIGITS(document.getElementById('telefono').value);
@@ -304,14 +327,7 @@ guardarBtn.addEventListener('click', async () => {
 
   const telefonoFull = '595' + telLocal;
 
-  const payload = {
-    nombre,
-    telefono: telefonoFull,
-    mantenimiento,
-    fechaBase: fechaBaseISO,
-    fechaRecordatorio,
-    horaRecordatorio
-  };
+  const payload = { nombre, telefono: telefonoFull, mantenimiento, fechaBase: fechaBaseISO, fechaRecordatorio, horaRecordatorio };
 
   try {
     if (editId) {
@@ -319,7 +335,6 @@ guardarBtn.addEventListener('click', async () => {
     } else {
       await push(ref(db, 'pacientes'), { ...payload, createdAt: Date.now() });
     }
-
     document.activeElement?.blur();
     requestAnimationFrame(() => modalPaciente.hide());
     searchMain.value = '';
@@ -333,7 +348,7 @@ guardarBtn.addEventListener('click', async () => {
 // ===== Buscador =====
 searchMain.addEventListener('input', renderTable);
 
-// ===== iCal (.ics) =====
+// ===== iCal =====
 function toICSDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${y}${m}${d}`; }
 function toICSTime(hhmm){ if(!hhmm) return '090000'; const [hh,mm]=hhmm.split(':'); return `${hh}${mm}00`; }
 function escapeICS(str=''){ return String(str).replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;'); }
@@ -363,7 +378,7 @@ function downloadICS(p){
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },0);
 }
 
-// ===== Dashboard / KPIs =====
+// ===== Dashboard =====
 function computeMantenimientoCounts(){ return [1,3,6].map(m=>snapshotToArray().filter(p=>p.mantenimiento===m).length); }
 function computeAltasSeries(){
   const labels=[], counts=[], now=new Date();
@@ -375,6 +390,15 @@ function computeAltasSeries(){
   }
   return {labels,counts};
 }
+function computeDxEnciaCounts(){
+  const counts = { sano:0, gingivitis:0, periodontitis:0 };
+  for (const p of snapshotToArray()) {
+    const dx = p.odontograma?.diagnosticoEncia;
+    if (dx && counts.hasOwnProperty(dx)) counts[dx]++;
+  }
+  return counts;
+}
+
 function renderDashboard(){
   const hoy=new Date(toISO(new Date())); const in7=new Date(hoy); in7.setDate(in7.getDate()+7);
   const arr = snapshotToArray();
@@ -383,6 +407,7 @@ function renderDashboard(){
   document.getElementById('kpiVencidos').textContent = arr.filter(p=> p.fechaRecordatorio && new Date(p.fechaRecordatorio) < hoy).length;
   document.getElementById('kpiProx7').textContent = arr.filter(p=>{ if(!p.fechaRecordatorio) return false; const fr=new Date(p.fechaRecordatorio); return fr>=hoy && fr<=in7; }).length;
 
+  // Pie mantenimiento
   const [c1,c3,c6] = computeMantenimientoCounts();
   const ctxPie = document.getElementById('chartMantenimiento');
   if (ctxPie) {
@@ -393,6 +418,8 @@ function renderDashboard(){
       options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } }
     });
   }
+
+  // Barras altas
   const ctxBar = document.getElementById('chartAltas');
   if (ctxBar) {
     const { labels, counts } = computeAltasSeries();
@@ -403,11 +430,28 @@ function renderDashboard(){
       options:{ responsive:true, scales:{ y:{ beginAtZero:true, precision:0 } } }
     });
   }
+
+  // Pie Dx Encía
+  const ctxDx = document.getElementById('chartDxEncia');
+  if (ctxDx) {
+    const c = computeDxEnciaCounts();
+    if (window.pieDxEncia) window.pieDxEncia.destroy();
+    window.pieDxEncia = new Chart(ctxDx, {
+      type: 'doughnut',
+      data: { labels: ['Sano','Gingivitis','Periodontitis'],
+              datasets: [{ data: [c.sano, c.gingivitis, c.periodontitis],
+                           backgroundColor: ['#22c55e','#f59e0b','#ef4444'] }] },
+      options: { responsive:true, plugins:{ legend:{ position:'bottom' } } }
+    });
+  }
 }
-btnDashboard.addEventListener('click', ()=>{ renderDashboard(); new bootstrap.Modal(document.getElementById('modalDashboard')).show(); });
+
+// Abrir dashboard y render cuando esté visible (evita canvas 0x0)
+btnDashboard.addEventListener('click', () => {
+  const m = new bootstrap.Modal(modalDashboardEl);
+  m.show();
+});
+modalDashboardEl.addEventListener('shown.bs.modal', renderDashboard);
 
 // ===== Init =====
-console.log('[APP] iniciado');
-(btnAgregar && btnDashboard && guardarBtn && mantenimientoSel && fechaBase && fechaISO && horaInput)
-  ? console.log('[APP] DOM OK')
-  : console.warn('[APP] Faltan IDs en el DOM');
+console.log('[APP] DOM OK');
