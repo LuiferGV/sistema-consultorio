@@ -1,5 +1,5 @@
 // Dental Molas - Sistema de Pacientes - Periodoncia
-// v1.3.4 — Fix crítico: sin duplicados de variables (btnLogin); incluye filtro A–Z, ficha, tratamientos, login, etc.
+// v1.3.5 — Fix: buscador vuelve a funcionar (listener) + match por dígitos de teléfono
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
@@ -14,7 +14,7 @@ import {
 import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
 
 window.FEATURES = Object.assign({ whatsappLink:true, phonePrefix595:true }, window.FEATURES || {});
-const APP_VERSION = 'v1.3.4';
+const APP_VERSION = 'v1.3.5';
 const ODONTO_URL  = 'odontograma_svg_interactivo_fdi_v_1.html';
 
 // ===== Firebase =====
@@ -49,7 +49,7 @@ const authOverlay   = document.getElementById('authOverlay');
 const loginEmail    = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
 const rememberMe    = document.getElementById('rememberMe');
-const btnLogin      = document.getElementById('btnLogin'); // <-- único lugar donde se declara
+const btnLogin      = document.getElementById('btnLogin');
 const btnLogout     = document.getElementById('btnLogout');
 const userEmailSpan = document.getElementById('userEmail');
 const authErrorBox  = document.getElementById('authError');
@@ -184,6 +184,9 @@ function actualizarRecordatorio() {
 mantenimientoSel?.addEventListener('change', actualizarRecordatorio);
 fechaBase?.addEventListener('change', actualizarRecordatorio);
 
+// NUEVO: enganchar el buscador
+searchMain?.addEventListener('input', renderTable);
+
 const splitLocalFromStored = (phone) => {
   const d = ONLY_DIGITS(phone);
   if (d.startsWith('595')) return d.slice(3);
@@ -278,10 +281,17 @@ function dxBadge(p){
   return `<span class="badge bg-secondary">${dx}</span>`;
 }
 function renderTable() {
-  const q = (searchMain.value || '').toLowerCase();
+  const q = (searchMain?.value || '').trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, '');
 
   let data = snapshotToArray()
-    .filter(p => !q || (p.nombre||'').toLowerCase().includes(q) || (p.telefono||'').toLowerCase().includes(q))
+    .filter(p => {
+      if (!q && !qDigits) return true;
+      const name = (p.nombre||'').toLowerCase();
+      const telStr = (p.telefono||'').toLowerCase();
+      const telDig = ONLY_DIGITS(p.telefono||'');
+      return (q && (name.includes(q) || telStr.includes(q))) || (qDigits && telDig.includes(qDigits));
+    })
     .filter(p => !currentDxFilter || (p.odontograma?.diagnosticoEncia || 'sano') === currentDxFilter)
     .filter(p => {
       if (!currentAlpha) return true;
