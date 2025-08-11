@@ -2,121 +2,75 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
 :root{
-  --brand:#354c56;
-  --brand-700:#2a3b43;
-  --brand-800:#1f2d33;
-  --accent:#da873a;
-  --accent-600:#c7772f;
-  --bg:#0b1114;         /* fondo profundo */
-  --card:#0f171b;       /* panel oscuro elegante */
-  --border:#1c272d;
-  --text:#e8eef2;
-  --muted:#94a3ad;
-  --ring: 0 12px 40px rgba(0,0,0,.35);
-  --soft: 0 6px 24px rgba(218,135,58,.15);
-  color-scheme: dark;   /* Forzar dark en UI nativa (scrollbars, inputs) */
+  --brand:#354c56; --brand-700:#2a3b43; --brand-800:#1f2d33;
+  --accent:#da873a; --accent-600:#c7772f;
+  --bg:#0b1114; --card:#0f171b; --border:#1c272d;
+  --text:#e8eef2; --muted:#94a3ad;
+  --ring: 0 12px 40px rgba(0,0,0,.35); --soft: 0 6px 24px rgba(218,135,58,.15);
+  color-scheme: dark;
 }
 
 html,body{
   background: radial-gradient(1200px 600px at 20% -10%, rgba(218,135,58,.08), transparent 60%),
               radial-gradient(1000px 500px at 120% 10%, rgba(53,76,86,.25), transparent 50%),
               var(--bg);
-  color: var(--text);
-  font-family: Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  color: var(--text); font-family: Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
   overflow-x:hidden;
 }
 
 /* HEADER */
-.app-header{
-  position: sticky; top:0; z-index:1020;
+.app-header{ position: sticky; top:0; z-index:1020;
   background: linear-gradient(180deg, var(--brand) 0%, var(--brand-700) 100%);
-  border-bottom: 1px solid #223036;
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  border-bottom: 1px solid #223036; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.header-inner{
+  display:flex; align-items:center; gap:1rem; padding:.9rem 0;
+  justify-content:space-between;
 }
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.9rem 0;}
-.brand{display:flex;align-items:center;gap:.9rem}
-.brand-logo{height:40px;width:auto;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
-.brand-title {
-  margin: 0;
-  font-weight: 200;
-  font-size: 1.15rem;
-  color: #fff;
-  letter-spacing: .2px;
-  flex: 1;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+.brand{ display:flex; align-items:center; gap:.9rem; min-width:0; }
+.brand-logo{ height:40px; width:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.35)); }
+.brand-title{
+  margin:0; font-weight:600; font-size:1.1rem; color:#fff; letter-spacing:.2px;
+  position:static; transform:none; flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.header-actions{ display:flex; align-items:center; gap:.5rem; flex-shrink:0; }
+
+/* pill de email (truncado) */
+.user-email{
+  max-width: 220px; padding:.28rem .6rem; font-size:.85rem; color:#eaf2f6;
+  background: rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.18);
+  border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 
 /* BOTONES */
-.btn{
-  border-radius:14px; border:1px solid transparent;
-  transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
-}
+.btn{ border-radius:14px; border:1px solid transparent; transition: transform .08s, box-shadow .2s, background .2s; }
 .btn:active{ transform: translateY(1px) scale(.99); }
-
-.btn-outline-light{
-  color:#fff; border-color:rgba(255,255,255,.25); background:transparent;
-}
+.btn-outline-light{ color:#fff; border-color:rgba(255,255,255,.25); background:transparent; }
 .btn-outline-light:hover{ background:rgba(255,255,255,.08); }
-
-.btn-light.text-dark{
-  background: linear-gradient(180deg, #fff 0%, #e7edf0 100%);
-  color:#0f1417; border:0; box-shadow: 0 6px 16px rgba(0,0,0,.15);
-}
+.btn-light.text-dark{ background: linear-gradient(180deg, #fff 0%, #e7edf0 100%); color:#0f1417; border:0; box-shadow: 0 6px 16px rgba(0,0,0,.15); }
 .btn-light.text-dark:hover{ filter:brightness(.97); }
-
-.btn-brand{
-  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-600) 100%);
-  color:#0b0f12; font-weight:700; border:0; box-shadow: 0 8px 22px rgba(218,135,58,.35);
-}
+.btn-brand{ background: linear-gradient(180deg, var(--accent) 0%, var(--accent-600) 100%); color:#0b0f12; font-weight:700; border:0; box-shadow: 0 8px 22px rgba(218,135,58,.35); }
 .btn-brand:hover{ filter:brightness(.95); }
 
 /* CONTENEDORES */
 .container{ max-width: 1150px; }
-
-.search{
-  border-radius:16px; padding:1rem 1.1rem;
-  background:#101a1f; border:1px solid var(--border); color:#e6eef3;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), var(--soft);
-}
+.search{ border-radius:16px; padding:1rem 1.1rem; background:#101a1f; border:1px solid var(--border); color:#e6eef3; box-shadow: inset 0 1px 0 rgba(255,255,255,.03), var(--soft); }
 .search::placeholder{ color:#7f8d97; }
 
 /* KPI CARDS */
-.card-kpi{
-  background: linear-gradient(180deg,#0f171b 0%, #0b1215 100%);
-  border:1px solid var(--border); border-radius:18px; box-shadow: var(--ring);
-}
+.card-kpi{ background: linear-gradient(180deg,#0f171b 0%, #0b1215 100%); border:1px solid var(--border); border-radius:18px; box-shadow: var(--ring); }
 .card-kpi .card-body{ padding:1rem 1.1rem; display:flex; align-items:center; justify-content:space-between; }
 .card-kpi .label{ color:var(--muted); font-weight:600; }
-.card-kpi .kpi{
-  font-weight:800; font-size:1.7rem; letter-spacing:.3px;
+.card-kpi .kpi{ font-weight:800; font-size:1.7rem; letter-spacing:.3px;
   background: linear-gradient(90deg, var(--accent) 0%, #ffb16b 100%);
-  -webkit-background-clip: text; background-clip:text; color: transparent;
-  text-shadow: 0 0 20px rgba(218,135,58,.25);
-}
+  -webkit-background-clip: text; background-clip:text; color: transparent; text-shadow: 0 0 20px rgba(218,135,58,.25); }
 
 /* TABLA */
-.table-responsive{ background:transparent; }
-.table{
-  background: var(--card);
-  border:1px solid var(--border);
-  border-radius:16px; overflow:hidden;
-  box-shadow: var(--ring);
-}
-.table thead{
-  background: linear-gradient(180deg, var(--brand-700) 0%, var(--brand-800) 100%);
-  color:#eaf2f6; border-bottom:1px solid var(--border);
-}
+.table{ background: var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow: var(--ring); }
+.table thead{ background: linear-gradient(180deg, var(--brand-700) 0%, var(--brand-800) 100%); color:#eaf2f6; border-bottom:1px solid var(--border); }
 .table th{ font-weight:700; }
 .table td, .table th{ vertical-align:middle; border-color: var(--border); }
 .table tbody tr{ transition: background .18s ease; }
 .table tbody tr:hover{ background:#0e161a; }
-
 .table td .btn{ border-radius:12px; }
 .btn-info{ background:#2f80ed; border:0; box-shadow: 0 6px 14px rgba(47,128,237,.25); }
 .btn-info:hover{ filter:brightness(.95); }
@@ -125,73 +79,44 @@ html,body{
 
 /* MODAL */
 .modal-content{ border:1px solid var(--border); border-radius:18px; background:#0f171b; box-shadow: var(--ring); }
-.modal-header{
-  border:0; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-700) 100%);
-  color:#fff; border-top-left-radius:18px; border-top-right-radius:18px;
-}
+.modal-header{ border:0; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-700) 100%); color:#fff; border-top-left-radius:18px; border-top-right-radius:18px; }
 .modal-title{ font-weight:800; }
-.form-control, .form-select{
-  background:#101a1f; color:#e6eef3; border:1px solid var(--border); border-radius:14px;
-}
+.form-control, .form-select{ background:#101a1f; color:#e6eef3; border:1px solid var(--border); border-radius:14px; }
 .form-control:focus, .form-select:focus{ border-color:#365867; box-shadow:0 0 0 4px rgba(53,76,86,.25); }
 label.form-label{ color:#c7d0d6; font-weight:600; }
 
 /* DASHBOARD CARDS */
-.card .card-header{
-  background:#0f161a; color:#dbe5ea; border-bottom:1px solid var(--border);
-  font-weight:700; letter-spacing:.2px;
-}
-
-/* Mobile header layout fix */
-@media (max-width: 768px){
-  .header-inner{ flex-wrap: wrap; gap:.5rem; padding:.6rem 10px; }
-  .brand{ gap:.5rem; width: 100%; display: flex; align-items: center; justify-content: center; }
-  .brand-logo{ height:36px; margin-left:10px; }
-  .brand-title{
-    position: static; transform: none; flex: 0 0 auto; text-align: center; display: block; margin: 0 auto;
-    font-size: 1rem; font-weight: 300;
-  }
-  .header-actions{ order: 3; width: 100%; display: flex; justify-content: center; gap: .5rem; padding: .25rem 10px; }
-  .header-actions .btn{ padding:.45rem .8rem; font-size:.9rem; }
-}
+.card .card-header{ background:#0f161a; color:#dbe5ea; border-bottom:1px solid var(--border); font-weight:700; letter-spacing:.2px; }
 
 /* ---- FILTRO DE DIAGNÓSTICO (chips) ---- */
-.filter-label{
-  color:#cfd8dc;               /* más contraste */
-  font-weight:700;
-}
-#filterDx .btn{
-  border-radius:999px;
-  padding:.35rem .75rem;
-  background:#101a1f;
-  color:#e6eef3;
-  border:1px solid var(--border);
-  transition:all .15s ease;
-}
+.filter-label{ color:#cfd8dc; font-weight:700; }
+#filterDx .btn{ border-radius:999px; padding:.35rem .75rem; background:#101a1f; color:#e6eef3; border:1px solid var(--border); transition:all .15s ease; }
 #filterDx .btn:hover{ background:#0e161a; }
-#filterDx .btn.active{
-  background: linear-gradient(180deg, var(--brand) 0%, var(--brand-700) 100%);
-  border-color: transparent;
-  color:#fff;
-  box-shadow: 0 8px 18px rgba(0,0,0,.35);
+#filterDx .btn.active{ background: linear-gradient(180deg, var(--brand) 0%, var(--brand-700) 100%); border-color: transparent; color:#fff; box-shadow: 0 8px 18px rgba(0,0,0,.35); }
+#filterDx [data-dx="sano"].btn{ color:#22c55e; border-color: rgba(34,197,94,.35); }
+#filterDx [data-dx="gingivitis"].btn{ color:#f59e0b !important; border-color: rgba(245,158,11,.35); }
+#filterDx [data-dx="periodontitis"].btn{ color:#ef4444; border-color: rgba(239,68,68,.35); }
+#filterDx .btn.active[data-dx="sano"]{ background: linear-gradient(180deg,#22c55e 0%,#16a34a 100%); color:#08120b; }
+#filterDx .btn.active[data-dx="gingivitis"]{ background: linear-gradient(180deg,#f59e0b 0%,#d97706 100%); color:#0f0f0f; }
+#filterDx .btn.active[data-dx="periodontitis"]{ background: linear-gradient(180deg,#ef4444 0%,#dc2626 100%); color:#0f0f0f; }
+
+/* ---- AUTH OVERLAY ---- */
+.auth-overlay{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+  background: radial-gradient(800px 400px at 30% -10%, rgba(218,135,58,.15), transparent 60%), rgba(0,0,0,.55);
+  z-index: 2000; }
+.auth-card{ width: 100%; max-width: 360px; background: #0f171b; border:1px solid var(--border); border-radius: 16px; box-shadow: var(--ring); padding: 18px; }
+.auth-link{ color:#82b1ff; text-decoration:none; }
+.auth-link:hover{ text-decoration:underline; }
+
+/* ---- RESPONSIVE HEADER ---- */
+@media (max-width: 992px){
+  .user-email{ max-width: 160px; }
 }
-/* tonos por estado (borde / texto en inactivo) */
-#filterDx [data-dx="sano"].btn{
-  color:#22c55e; border-color: rgba(34,197,94,.35);
-}
-#filterDx [data-dx="gingivitis"].btn{
-  color:#f59e0b !important; border-color: rgba(245,158,11,.35);  /* !important por si quedó text-dark */
-}
-#filterDx [data-dx="periodontitis"].btn{
-  color:#ef4444; border-color: rgba(239,68,68,.35);
-}
-/* activo con color lleno */
-#filterDx .btn.active[data-dx="sano"]{
-  background: linear-gradient(180deg,#22c55e 0%,#16a34a 100%); color:#08120b;
-}
-#filterDx .btn.active[data-dx="gingivitis"]{
-  background: linear-gradient(180deg,#f59e0b 0%,#d97706 100%); color:#0f0f0f;
-}
-#filterDx .btn.active[data-dx="periodontitis"]{
-  background: linear-gradient(180deg,#ef4444 0%,#dc2626 100%); color:#0f0f0f;
+@media (max-width: 576px){
+  /* En móviles muy chicos ocultamos el email para evitar apretujes */
+  .user-email{ display:none !important; }
+  .header-inner{ padding:.6rem 0; }
+  .brand-logo{ height:36px; }
+  .brand-title{ font-size:1rem; }
+  .header-actions .btn{ padding:.45rem .8rem; font-size:.9rem; }
 }

@@ -19,6 +19,10 @@
         <h1 class="brand-title">Sistema de Pacientes - Periodoncia</h1>
       </div>
       <div class="header-actions">
+        <span id="userEmail" class="user-email d-none"></span>
+        <button id="btnLogout" class="btn btn-outline-light d-none">
+          <i class="fa-solid fa-right-from-bracket me-1"></i> Salir
+        </button>
         <button id="btnDashboard" class="btn btn-outline-light">
           <i class="fa-solid fa-chart-line me-1"></i> Dashboard
         </button>
@@ -29,13 +33,50 @@
     </div>
   </header>
 
+  <!-- AUTH OVERLAY -->
+  <div id="authOverlay" class="auth-overlay" style="display:flex;">
+    <div class="auth-card">
+      <div class="text-center mb-3">
+        <img src="logoprincipal.png" alt="Dental Molas" height="48">
+      </div>
+      <h5 class="mb-3 text-center">Acceso</h5>
+
+      <div class="mb-2">
+        <label class="form-label">Email</label>
+        <input id="loginEmail" type="email" class="form-control" placeholder="usuario@ejemplo.com" autocomplete="username">
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label">Contraseña</label>
+        <input id="loginPassword" type="password" class="form-control" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <div class="form-check mb-2">
+        <input id="rememberMe" class="form-check-input" type="checkbox" checked>
+        <label class="form-check-label" for="rememberMe">Mantener sesión iniciada</label>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <a href="#" id="linkReset" class="auth-link">¿Olvidaste la contraseña?</a>
+      </div>
+
+      <div id="authInfo" class="alert alert-success py-2 d-none"></div>
+      <div id="authError" class="alert alert-danger py-2 d-none"></div>
+
+      <button id="btnLogin" class="btn btn-brand w-100 mt-1">Ingresar</button>
+      <div class="mt-3 small text-muted text-center">
+        Solo usuarios autorizados.
+      </div>
+    </div>
+  </div>
+
   <!-- Buscador -->
   <main class="container py-4">
     <div class="mb-3">
       <input id="searchMain" class="form-control search" placeholder="Buscar paciente por nombre o teléfono" autocomplete="off" />
     </div>
 
-    <!-- Filtro rápido diagnóstico encía -->
+    <!-- Filtro diagnóstico encía -->
     <div class="d-flex align-items-center gap-2 mb-2">
       <span class="filter-label">Diagnóstico de encía:</span>
       <div id="filterDx" class="btn-group btn-group-sm" role="group" aria-label="Filtro diagnóstico encía">
@@ -141,7 +182,6 @@
         </div>
 
         <div class="modal-body">
-          <!-- Diagnóstico de la encía (fuera del iframe) -->
           <div class="row align-items-center g-2 mb-3">
             <div class="col-auto">
               <span class="fw-semibold">Diagnóstico de la encía:</span>

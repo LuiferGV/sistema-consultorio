@@ -1,25 +1,25 @@
 // Dental Molas - Sistema de Pacientes - Periodoncia
-// v1.1.5 — Dark mode forzado + filtro chips + Dx Encía en tabla + Dashboard con gráfico Dx
-// Mantiene: WhatsApp, prefijo 595, CRUD, .ics, KPIs, buscador, odontograma persistente
+// v1.2.1 — Auth con “mantener sesión” + reset por email
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getDatabase, ref, onChildAdded, onChildChanged, onChildRemoved,
-  push, remove, update
+  push, remove, update, off
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut,
+  setPersistence, browserLocalPersistence, browserSessionPersistence,
+  sendPasswordResetEmail
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
 
-// FEATURES
-window.FEATURES = Object.assign({
-  whatsappLink:   true,
-  phonePrefix595: true,
-}, window.FEATURES || {});
-const APP_VERSION = 'v1.1.5';
-const ODONTO_URL  = 'odontograma_svg_interactivo_fdi_v_1.html'; // el archivo que tengas en tu raíz
+window.FEATURES = Object.assign({ whatsappLink:true, phonePrefix595:true }, window.FEATURES || {});
+const APP_VERSION = 'v1.2.1';
+const ODONTO_URL  = 'odontograma_svg_interactivo_fdi_v_1.html';
 
-// ===== Firebase =====
+// ===== Firebase (TU proyecto) =====
 const firebaseConfig = {
-  apiKey: "AIzaSyB4v68jvnlVrprM4n4A23fv23OKiby_Kqq8",
+  apiKey: "AIzaSyB4v68jVnlVrpM4n4A23fv23OKibY_Kqq8",
   authDomain: "sistema-consultorio-53424.firebaseapp.com",
   databaseURL: "https://sistema-consultorio-53424-default-rtdb.firebaseio.com/",
   projectId: "sistema-consultorio-53424",
@@ -29,22 +29,33 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
+const auth = getAuth(app);
 console.log(`[APP ${APP_VERSION}] iniciado`);
 
 // ===== DOM =====
-const tablaBody        = document.querySelector('#tablaPacientes tbody');
-const btnAgregar       = document.getElementById('btnAgregar');
-const btnDashboard     = document.getElementById('btnDashboard');
+const tablaBody = document.querySelector('#tablaPacientes tbody');
+const btnAgregar = document.getElementById('btnAgregar');
+const btnDashboard = document.getElementById('btnDashboard');
 const mantenimientoSel = document.getElementById('mantenimiento');
-const fechaDDMMAAAA    = document.getElementById('fechaRecordatorioDDMMAAAA');
-const fechaISO         = document.getElementById('fechaRecordatorioISO');
-const searchMain       = document.getElementById('searchMain');
-const horaInput        = document.getElementById('horaRecordatorio');
-const guardarBtn       = document.getElementById('guardarPaciente');
-const fechaBase        = document.getElementById('fechaBase');
-const modalPacienteEl  = document.getElementById('modalPaciente');
+const fechaDDMMAAAA = document.getElementById('fechaRecordatorioDDMMAAAA');
+const fechaISO  = document.getElementById('fechaRecordatorioISO');
+const searchMain = document.getElementById('searchMain');
+const horaInput  = document.getElementById('horaRecordatorio');
+const guardarBtn = document.getElementById('guardarPaciente');
+const fechaBase  = document.getElementById('fechaBase');
+const modalPacienteEl = document.getElementById('modalPaciente');
 
-// Modal Odontograma
+const authOverlay   = document.getElementById('authOverlay');
+const loginEmail    = document.getElementById('loginEmail');
+const loginPassword = document.getElementById('loginPassword');
+const rememberMe    = document.getElementById('rememberMe');
+const btnLogin      = document.getElementById('btnLogin');
+const btnLogout     = document.getElementById('btnLogout');
+const userEmailSpan = document.getElementById('userEmail');
+const authErrorBox  = document.getElementById('authError');
+const authInfoBox   = document.getElementById('authInfo');
+const linkReset     = document.getElementById('linkReset');
+
 const modalOdontoEl    = document.getElementById('modalOdonto');
 const modalOdonto      = new bootstrap.Modal(modalOdontoEl);
 const odontoFrame      = document.getElementById('odontoFrame');
@@ -54,20 +65,16 @@ const dxRadios         = document.querySelectorAll('input[name="dxEncia"]');
 const getDx = () => [...dxRadios].find(r => r.checked)?.value || 'sano';
 const setDx = (v) => dxRadios.forEach(r => r.checked = (r.value === (v || 'sano')));
 
-// Dashboard modal
 const modalDashboardEl = document.getElementById('modalDashboard');
-
-// Instancia única del modal de paciente
 const modalPaciente = new bootstrap.Modal(modalPacienteEl);
-modalPacienteEl.addEventListener('shown.bs.modal', () => {
-  document.getElementById('nombre')?.focus();
-});
+modalPacienteEl.addEventListener('shown.bs.modal', () => document.getElementById('nombre')?.focus());
 
 // ===== Estado =====
 const pacientesMap = new Map();
 let editId = null;
 let odontoIdActual = null;
 let odontoReady = false;
+let listenersOn = false;
 
 // ===== Helpers =====
 const toISO = (d)=> d.toISOString().split('T')[0];
@@ -86,10 +93,9 @@ function actualizarRecordatorio() {
   fechaISO.value = iso;
   fechaDDMMAAAA.value = toDDMMAAAA(iso);
 }
-mantenimientoSel.addEventListener('change', actualizarRecordatorio);
-fechaBase.addEventListener('change', actualizarRecordatorio);
+mantenimientoSel?.addEventListener('change', actualizarRecordatorio);
+fechaBase?.addEventListener('change', actualizarRecordatorio);
 
-// Teléfonos / WhatsApp
 const ONLY_DIGITS = s => (s||'').replace(/\D/g,'');
 const splitLocalFromStored = (phone) => {
   const d = ONLY_DIGITS(phone);
@@ -106,17 +112,83 @@ const toWaNumber = (stored) => {
   return d;
 };
 
-// ===== RTDB =====
+// ===== Auth =====
+function showOverlay(show){
+  authOverlay.style.display = show ? 'flex' : 'none';
+  userEmailSpan.classList.toggle('d-none', show);
+  btnLogout.classList.toggle('d-none', show);
+}
+function setAuthMessage(type, text){
+  const box = type === 'info' ? authInfoBox : authErrorBox;
+  authInfoBox.classList.add('d-none'); authErrorBox.classList.add('d-none');
+  if (text) { box.textContent = text; box.classList.remove('d-none'); }
+}
+
+btnLogin.addEventListener('click', async ()=> {
+  const email = loginEmail.value.trim();
+  const pass  = loginPassword.value.trim();
+  setAuthMessage('error',''); setAuthMessage('info','');
+  if (!email || !pass) { setAuthMessage('error','Completa email y contraseña.'); return; }
+
+  btnLogin.disabled = true;
+  try {
+    await setPersistence(auth, rememberMe.checked ? browserLocalPersistence : browserSessionPersistence);
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    setAuthMessage('error', 'No se pudo iniciar sesión: ' + (e?.message || e));
+  } finally {
+    btnLogin.disabled = false;
+  }
+});
+btnLogout.addEventListener('click', ()=> signOut(auth));
+
+linkReset.addEventListener('click', async (e) => {
+  e.preventDefault();
+  setAuthMessage('error',''); setAuthMessage('info','');
+  const email = loginEmail.value.trim();
+  if (!email) { setAuthMessage('error','Ingresá tu email para enviarte el link.'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    setAuthMessage('info','Te envié un email para restablecer la contraseña.');
+  } catch (e) {
+    setAuthMessage('error','No pude enviar el mail: ' + (e?.message || e));
+  }
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    userEmailSpan.textContent = user.email || '';
+    showOverlay(false);
+    attachListeners();
+  } else {
+    detachListeners();
+    pacientesMap.clear();
+    renderAll();
+    showOverlay(true);
+    loginPassword.value = '';
+    loginEmail.focus();
+  }
+});
+
+// ===== RTDB listeners =====
 const pacientesRef = ref(db, 'pacientes');
-onChildAdded(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() }); renderAll(); });
-onChildChanged(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() }); renderAll(); });
-onChildRemoved(pacientesRef, (snap) => { pacientesMap.delete(snap.key); renderAll(); });
+function attachListeners(){
+  if (listenersOn) return;
+  onChildAdded(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() }); renderAll(); });
+  onChildChanged(pacientesRef, (snap) => { pacientesMap.set(snap.key, { _id: snap.key, ...snap.val() }); renderAll(); });
+  onChildRemoved(pacientesRef, (snap) => { pacientesMap.delete(snap.key); renderAll(); });
+  listenersOn = true;
+}
+function detachListeners(){
+  if (!listenersOn) return;
+  off(pacientesRef);
+  listenersOn = false;
+}
 
 // ===== Filtro Dx =====
 const filterDxGroup = document.getElementById('filterDx');
 let currentDxFilter = '';
 if (filterDxGroup) {
-  // estilo inicial: "Todos" activo
   [...filterDxGroup.querySelectorAll('button')][0]?.classList.add('active');
   filterDxGroup.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-dx]');
@@ -130,7 +202,6 @@ if (filterDxGroup) {
 
 // ===== Render =====
 function snapshotToArray() { return Array.from(pacientesMap.values()); }
-
 function dxBadge(p){
   const dx = p?.odontograma?.diagnosticoEncia;
   if (!dx) return '<span class="text-muted">—</span>';
@@ -139,7 +210,6 @@ function dxBadge(p){
   if (dx === 'periodontitis') return '<span class="badge bg-danger">Periodontitis</span>';
   return `<span class="badge bg-secondary">${dx}</span>`;
 }
-
 function renderTable() {
   const q = (searchMain.value || '').toLowerCase();
   const data = snapshotToArray()
@@ -184,7 +254,6 @@ function renderTable() {
     tablaBody.appendChild(tr);
   }
 }
-
 function actualizarContadores(){
   const hoy = new Date(toISO(new Date()));
   const in7 = new Date(hoy); in7.setDate(in7.getDate()+7);
@@ -196,7 +265,7 @@ function actualizarContadores(){
 }
 function renderAll(){ renderTable(); actualizarContadores(); }
 
-// ===== Acciones de fila =====
+// ===== Acciones fila =====
 tablaBody.addEventListener('click', async (e) => {
   const btnOdonto = e.target.closest('[data-odonto]');
   const btnICS    = e.target.closest('[data-ics]');
@@ -214,14 +283,14 @@ tablaBody.addEventListener('click', async (e) => {
   }
 });
 
-// ===== Odontograma (modal) =====
+// ===== Odontograma =====
 async function openOdonto(id){
   const p = pacientesMap.get(id);
   if (!p) return;
   odontoIdActual = id;
   odontoReady = false;
 
-  modalOdontoEl.querySelector('.modal-title').textContent = `Odontograma — ${p.nombre ?? ''}`;
+  document.querySelector('#modalOdonto .modal-title').textContent = `Odontograma — ${p.nombre ?? ''}`;
   setDx(p.odontograma?.diagnosticoEncia || 'sano');
 
   odontoNoFile.classList.add('d-none');
@@ -243,19 +312,13 @@ async function openOdonto(id){
       odontoFrame.style.display = 'block';
     };
   } catch (e) {
-    odontoNoFile.innerHTML = `
-      <b>No encuentro <code>${ODONTO_URL}</code></b> en tu hosting.<br>
-      Subí el archivo a la raíz y probá abrir: <code>/${ODONTO_URL}</code>.
-    `;
+    odontoNoFile.innerHTML = `<b>No encuentro <code>${ODONTO_URL}</code></b> en tu hosting. Subí el archivo a la raíz.`;
     odontoNoFile.classList.remove('d-none');
   }
-
-  modalOdonto.show();
+  new bootstrap.Modal(modalOdontoEl).show();
 }
-
 guardarOdontoBtn.addEventListener('click', async () => {
-  if (!odontoIdActual) return;
-  const p = pacientesMap.get(odontoIdActual);
+  const p = pacientesMap.get(odontoIdActual || '');
   if (!p) return;
 
   let state = {};
@@ -272,13 +335,13 @@ guardarOdontoBtn.addEventListener('click', async () => {
     await update(ref(db, 'pacientes/' + odontoIdActual), { odontograma: state });
     pacientesMap.set(odontoIdActual, { ...p, odontograma: state });
     renderAll();
-    modalOdonto.hide();
+    bootstrap.Modal.getInstance(modalOdontoEl)?.hide();
   } catch (e) {
     alert('No se pudo guardar el odontograma: ' + (e?.message || e));
   }
 });
 
-// ===== Modal Agregar/Editar =====
+// ===== Modal Paciente =====
 function openEdit(id) {
   const p = pacientesMap.get(id);
   if (!p) return;
@@ -293,9 +356,8 @@ function openEdit(id) {
   fechaDDMMAAAA.value = toDDMMAAAA(iso);
   horaInput.value = p.horaRecordatorio || '09:00';
   document.querySelector('#modalPaciente .modal-title').textContent = 'Editar Paciente';
-  modalPaciente.show();
+  new bootstrap.Modal(modalPacienteEl).show();
 }
-
 btnAgregar.addEventListener('click', () => {
   editId = null;
   document.getElementById('formPaciente').reset();
@@ -304,10 +366,8 @@ btnAgregar.addEventListener('click', () => {
   actualizarRecordatorio();
   horaInput.value = '09:00';
   document.querySelector('#modalPaciente .modal-title').textContent = 'Agregar Paciente';
-  modalPaciente.show();
+  new bootstrap.Modal(modalPacienteEl).show();
 });
-
-// Guardar ficha
 guardarBtn.addEventListener('click', async () => {
   const nombre = document.getElementById('nombre').value.trim();
   const telLocal = ONLY_DIGITS(document.getElementById('telefono').value);
@@ -320,26 +380,17 @@ guardarBtn.addEventListener('click', async () => {
   const horaRecordatorio  = horaInput.value || null;
   const fechaBaseISO      = fechaBase.value;
 
-  if (!nombre || !telLocal || !fechaRecordatorio) {
-    alert('Completa todos los campos');
-    return;
-  }
-
+  if (!nombre || !telLocal || !fechaRecordatorio) { alert('Completa todos los campos'); return; }
   const telefonoFull = '595' + telLocal;
 
   const payload = { nombre, telefono: telefonoFull, mantenimiento, fechaBase: fechaBaseISO, fechaRecordatorio, horaRecordatorio };
-
   try {
-    if (editId) {
-      await update(ref(db, 'pacientes/' + editId), payload);
-    } else {
-      await push(ref(db, 'pacientes'), { ...payload, createdAt: Date.now() });
-    }
+    if (editId) await update(ref(db, 'pacientes/' + editId), payload);
+    else        await push(ref(db, 'pacientes'), { ...payload, createdAt: Date.now() });
     document.activeElement?.blur();
-    requestAnimationFrame(() => modalPaciente.hide());
+    requestAnimationFrame(() => bootstrap.Modal.getInstance(modalPacienteEl)?.hide());
     searchMain.value = '';
-    renderAll();
-    editId = null;
+    renderAll(); editId = null;
   } catch (e) {
     alert('No se pudo guardar: ' + (e?.message || e));
   }
@@ -359,22 +410,18 @@ function downloadICS(p){
   const datePart = toICSDate(p.fechaRecordatorio);
   const timePart = toICSTime(p.horaRecordatorio);
   const isAllDay = !p.horaRecordatorio;
-
   const vevent = [
-    'BEGIN:VEVENT',
-    `UID:${uid}`, `DTSTAMP:${dtstamp}`,
+    'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${dtstamp}`,
     isAllDay ? `DTSTART;VALUE=DATE:${datePart}` : `DTSTART:${datePart}T${timePart}`,
     isAllDay ? null : 'DURATION:PT30M',
     `SUMMARY:${escapeICS(`Recordatorio: ${p.nombre || 'Paciente'}`)}`,
     `DESCRIPTION:${escapeICS(`Paciente: ${p.nombre || ''}\nTeléfono: ${p.telefono || ''}\nMantenimiento: ${p.mantenimiento ? p.mantenimiento + ' meses' : '—'}`)}`,
     'TRANSP:OPAQUE','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Recordatorio de cita','TRIGGER:-P1D','END:VALARM','END:VEVENT'
   ].filter(Boolean).join('\r\n');
-
   const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Dental Molas//Pacientes//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH',vevent,'END:VCALENDAR'].join('\r\n');
   const blob = new Blob([ics], { type:'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `${(p.nombre||'paciente').replace(/[^a-z0-9_-]+/gi,'_')}_recordatorio.ics`;
+  const a = document.createElement('a'); a.href = url; a.download = `${(p.nombre||'paciente').replace(/[^a-z0-9_-]+/gi,'_')}_recordatorio.ics`;
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },0);
 }
 
@@ -398,7 +445,6 @@ function computeDxEnciaCounts(){
   }
   return counts;
 }
-
 function renderDashboard(){
   const hoy=new Date(toISO(new Date())); const in7=new Date(hoy); in7.setDate(in7.getDate()+7);
   const arr = snapshotToArray();
@@ -407,7 +453,6 @@ function renderDashboard(){
   document.getElementById('kpiVencidos').textContent = arr.filter(p=> p.fechaRecordatorio && new Date(p.fechaRecordatorio) < hoy).length;
   document.getElementById('kpiProx7').textContent = arr.filter(p=>{ if(!p.fechaRecordatorio) return false; const fr=new Date(p.fechaRecordatorio); return fr>=hoy && fr<=in7; }).length;
 
-  // Pie mantenimiento
   const [c1,c3,c6] = computeMantenimientoCounts();
   const ctxPie = document.getElementById('chartMantenimiento');
   if (ctxPie) {
@@ -418,8 +463,6 @@ function renderDashboard(){
       options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } }
     });
   }
-
-  // Barras altas
   const ctxBar = document.getElementById('chartAltas');
   if (ctxBar) {
     const { labels, counts } = computeAltasSeries();
@@ -430,8 +473,6 @@ function renderDashboard(){
       options:{ responsive:true, scales:{ y:{ beginAtZero:true, precision:0 } } }
     });
   }
-
-  // Pie Dx Encía
   const ctxDx = document.getElementById('chartDxEncia');
   if (ctxDx) {
     const c = computeDxEnciaCounts();
@@ -445,12 +486,7 @@ function renderDashboard(){
     });
   }
 }
-
-// Abrir dashboard y render cuando esté visible (evita canvas 0x0)
-btnDashboard.addEventListener('click', () => {
-  const m = new bootstrap.Modal(modalDashboardEl);
-  m.show();
-});
+btnDashboard.addEventListener('click', () => { new bootstrap.Modal(modalDashboardEl).show(); });
 modalDashboardEl.addEventListener('shown.bs.modal', renderDashboard);
 
 // ===== Init =====
