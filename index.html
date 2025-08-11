@@ -70,20 +70,65 @@
     </div>
   </div>
 
-  <!-- Buscador -->
+  <!-- Main -->
   <main class="container py-4">
+    <!-- Buscador -->
     <div class="mb-3">
       <input id="searchMain" class="form-control search" placeholder="Buscar paciente por nombre o teléfono" autocomplete="off" />
     </div>
 
-    <!-- Filtro diagnóstico encía -->
-    <div class="d-flex align-items-center gap-2 mb-2">
-      <span class="filter-label">Diagnóstico de encía:</span>
-      <div id="filterDx" class="btn-group btn-group-sm" role="group" aria-label="Filtro diagnóstico encía">
-        <button type="button" class="btn" data-dx="">Todos</button>
-        <button type="button" class="btn" data-dx="sano">Sano</button>
-        <button type="button" class="btn" data-dx="gingivitis">Gingivitis</button>
-        <button type="button" class="btn" data-dx="periodontitis">Periodontitis</button>
+    <!-- Filtros fila 1: Dx izquierda, Recordatorio derecha -->
+    <div class="d-flex align-items-center gap-3 flex-wrap mb-2">
+      <div class="d-flex align-items-center gap-2">
+        <span class="filter-label">Diagnóstico de encía:</span>
+        <div id="filterDx" class="btn-group btn-group-sm" role="group" aria-label="Filtro diagnóstico encía">
+          <button type="button" class="btn" data-dx="">Todos</button>
+          <button type="button" class="btn" data-dx="sano">Sano</button>
+          <button type="button" class="btn" data-dx="gingivitis">Gingivitis</button>
+          <button type="button" class="btn" data-dx="periodontitis">Periodontitis</button>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 ms-auto justify-content-end">
+        <span class="filter-label">Recordatorio:</span>
+        <div id="sortRec" class="btn-group btn-group-sm" role="group" aria-label="Orden recordatorio">
+          <button type="button" class="btn" data-sort="prox">Próximos</button>
+          <button type="button" class="btn" data-sort="lej">Lejanos</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros fila 2: Alfabético -->
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+      <span class="filter-label">Inicial:</span>
+      <div id="alphaBar" class="d-flex flex-wrap gap-1">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-alpha="">Todos</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="a">A</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="b">B</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="c">C</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="d">D</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="e">E</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="f">F</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="g">G</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="h">H</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="i">I</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="j">J</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="k">K</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="l">L</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="m">M</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="n">N</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="o">O</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="p">P</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="q">Q</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="r">R</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="s">S</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="t">T</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="u">U</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="v">V</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="w">W</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="x">X</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="y">Y</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="z">Z</button>
       </div>
     </div>
 
@@ -105,7 +150,7 @@
             <th>Mantenimiento</th>
             <th>Dx Encía</th>
             <th>Recordatorio</th>
-            <th style="width:260px;">Acciones</th>
+            <th style="width:320px;">Acciones</th>
           </tr>
         </thead>
         <tbody><!-- filas dinámicas --></tbody>
@@ -172,7 +217,7 @@
     </div>
   </div>
 
-  <!-- Modal Odontograma -->
+  <!-- Modal Odontograma (edición) -->
   <div class="modal fade" id="modalOdonto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
@@ -214,6 +259,100 @@
     </div>
   </div>
 
+  <!-- Modal FICHA (ver información) -->
+  <div class="modal fade" id="modalFicha" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Ficha — <span id="fichaNombre"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <ul class="nav nav-pills mb-3" id="fichaTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-datos-link" data-bs-toggle="pill" data-bs-target="#tabDatos" type="button" role="tab">Datos</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-odonto-link" data-bs-toggle="pill" data-bs-target="#tabOdontoFicha" type="button" role="tab">Odontograma</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-trat-link" data-bs-toggle="pill" data-bs-target="#tabTrat" type="button" role="tab">Tratamientos</button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- Datos -->
+            <div class="tab-pane fade show active" id="tabDatos" role="tabpanel">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="list-group">
+                    <div class="list-group-item d-flex justify-content-between">
+                      <span class="fw-semibold">Nombre</span><span id="fNombre"></span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                      <span class="fw-semibold">Teléfono</span>
+                      <span>
+                        <span id="fTelefono"></span>
+                        <a id="fWhats" class="btn btn-success btn-sm ms-2" target="_blank" rel="noopener" title="WhatsApp">
+                          <i class="fa-brands fa-whatsapp"></i>
+                        </a>
+                      </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                      <span class="fw-semibold">Fecha ingreso</span><span id="fIngreso"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="list-group">
+                    <div class="list-group-item d-flex justify-content-between">
+                      <span class="fw-semibold">Mantenimiento</span><span id="fMant"></span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                      <span class="fw-semibold">Dx encía</span><span id="fDx"></span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                      <span class="fw-semibold">Recordatorio</span><span id="fRecordatorio"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Odontograma (solo visualización) -->
+            <div class="tab-pane fade" id="tabOdontoFicha" role="tabpanel">
+              <div id="fichaOdontoWarn" class="alert alert-warning d-none"></div>
+              <iframe id="fichaOdontoFrame" style="width:100%;height:700px;border:0;display:none"></iframe>
+            </div>
+
+            <!-- Tratamientos -->
+            <div class="tab-pane fade" id="tabTrat" role="tabpanel">
+              <form id="formTrat" class="row g-2 align-items-end mb-3">
+                <div class="col-md-3">
+                  <label class="form-label">Fecha</label>
+                  <input type="date" id="tratFecha" class="form-control">
+                </div>
+                <div class="col-md-7">
+                  <label class="form-label">Detalle</label>
+                  <input type="text" id="tratDetalle" class="form-control" placeholder="Ej.: Caries en 21">
+                </div>
+                <div class="col-md-2">
+                  <button type="button" id="btnAddTrat" class="btn btn-brand w-100">Agregar</button>
+                </div>
+              </form>
+              <div id="tratList" class="list-group"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Dashboard -->
   <div class="modal fade" id="modalDashboard" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
@@ -229,23 +368,10 @@
             <div class="col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Próx. 7 días</span><span id="kpiProx7" class="kpi">0</span></div></div></div>
             <div class="col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Vencidos</span><span id="kpiVencidos" class="kpi">0</span></div></div></div>
           </div>
-
           <div class="row g-3">
-            <div class="col-md-6">
-              <div class="card"><div class="card-header">Distribución por mantenimiento</div>
-                <div class="card-body"><canvas id="chartMantenimiento"></canvas></div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card"><div class="card-header">Altas (últimos 6 meses)</div>
-                <div class="card-body"><canvas id="chartAltas"></canvas></div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card"><div class="card-header">Diagnóstico de encía</div>
-                <div class="card-body"><canvas id="chartDxEncia"></canvas></div>
-              </div>
-            </div>
+            <div class="col-md-4"><div class="card"><div class="card-header">Dx de encía</div><div class="card-body"><canvas id="chartDxEncia"></canvas></div></div></div>
+            <div class="col-md-4"><div class="card"><div class="card-header">Distribución por mantenimiento</div><div class="card-body"><canvas id="chartMantenimiento"></canvas></div></div></div>
+            <div class="col-md-4"><div class="card"><div class="card-header">Altas (últimos 6 meses)</div><div class="card-body"><canvas id="chartAltas"></canvas></div></div></div>
           </div>
         </div>
         <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
