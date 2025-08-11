@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Odontograma SVG Interactivo (FDI) – Adulto & Temporal – v3</title>
+  <style>
+    :root{
+      --bg: #0f172a;           /* slate-900 */
+      --panel: #111827;        /* gray-900 */
+      --muted: #94a3b8;        /* slate-400 */
+      --text: #e5e7eb;         /* gray-200 */
+      --accent: #22d3ee;       /* cyan-400 */
+      --accent-2:#3b82f6;      /* blue-500 */
+      --line: #334155;         /* slate-700 */
+      /* estados */
+      --sano: transparent;
+      --caries: #e53935;
+      --resina: #1e88e5;
+      --sellante: #8e24aa;
+      --carilla: #00bcd4;      /* cian */
+      --corona: #d4af37;       /* dorado */
+      --endo: #fb8c00;         /* naranja */
+      --ausente: #b0bec5;      /* gris */
+      --puente: #a3e635;       /* lima */
+      --recesion: #ec4899;     /* rosa */
+    }
+
+    *{box-sizing:border-box}
+    body{ margin:0; background:var(--bg); color:var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial }
+    .wrap{max-width:1200px;margin:auto;padding:24px}
+    h1{font-size:clamp(22px,3.2vw,32px);margin:0 0 6px;font-weight:700}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+
+    .toolbar{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; background:linear-gradient(180deg,#0b1224,#0c1429); border:1px solid #1f2937; padding:12px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.25); }
+
+    .seg{display:inline-flex; background:#0b1220; border:1px solid #243244; border-radius:12px; padding:4px}
+    .seg button{ appearance:none; border:none; background:transparent; color:var(--text); padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600 }
+    .seg button.active{ background:#0f1b36; outline:2px solid var(--accent); }
+
+    .status-group{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #243244; border-radius:999px; cursor:pointer; user-select:none; transition:transform .08s ease; background:#0b1220; }
+    .chip:hover{transform:translateY(-1px)}
+    .dot{width:14px;height:14px;border-radius:50%; border:1px solid #2b3445}
+    .chip.active{outline:2px solid var(--accent)}
+
+    .btn{ appearance:none; border:1px solid #243244; background:#0b1220; color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:600; transition:all .15s ease; }
+    .btn:hover{transform:translateY(-1px); border-color:#3b82f6}
+    .btn:active{transform:translateY(0)}
+    .btn.secondary{background:#091228}
+    .btn.toggle.active{ outline:2px solid var(--accent-2); }
+
+    .legend-note{color:var(--muted); font-size:12px}
+
+    .canvas{ margin-top:14px; background:#0b1220; border:1px solid #1f2937; border-radius:18px; padding:12px; overflow:auto; }
+
+    /* SVG styling */
+    svg{width:100%; height:auto; display:block}
+    .tooth-bg{fill:#0e1729; stroke:var(--line); stroke-width:1.2; rx:10, ry:10}
+
+    .surface{stroke:#1f2937; stroke-width:0.8; cursor:pointer;}
+    .surface:hover{filter:brightness(1.1)}
+
+    .label{font-size:10px; fill:#a5b4fc; font-weight:700; text-anchor:middle}
+    .quadrant{font-size:11px; fill:#93c5fd; font-weight:600}
+
+    .xline{stroke:var(--ausente); stroke-width:2.4; stroke-linecap:round}
+    .endo{stroke:var(--endo); stroke-width:2; stroke-linecap:round}
+    .corona{stroke:var(--corona); stroke-width:2.4; fill:none}
+    .bridge{stroke:var(--puente); stroke-width:3; stroke-linecap:round}
+    .recession{stroke:var(--recesion); stroke-width:1.8; stroke-linecap:round}
+
+    .ghost{opacity:.35}
+
+    /* Perio UI */
+    .perio-dot{ fill:#0b1220; stroke:#475569; stroke-width:.8; cursor:pointer }
+    .perio-text{ font-size:9px; fill:#cbd5e1; pointer-events:none; text-anchor:middle; dominant-baseline:middle }
+    .perio-active .perio-dot{ stroke:#cbd5e1 }
+    .sev-ok{ fill:#cbd5e1 }
+    .sev-mid{ fill:#f59e0b }
+    .sev-high{ fill:#ef4444 }
+
+    .footer{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:10px; color:var(--muted); font-size:12px}
+    textarea{width:100%; min-height:120px; background:#0b1220; color:#e5e7eb; border:1px solid #243244; border-radius:12px; padding:10px}
+    .io{display:flex; gap:8px; flex-wrap:wrap}
+    .io .btn{padding:8px 10px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Odontograma (FDI) – Adulto & Temporal</h1>
+    <div class="sub">Vista del odontólogo (FDI ISO-3950). Cambia de dentición, marca superficies/estados, registra sondaje periodontal y exporta/importa JSON.</div>
+
+    <div class="toolbar" id="toolbar">
+      <div class="seg" id="segDent">
+        <button data-den="adult" class="active">Adulto</button>
+        <button data-den="temporal">Temporal</button>
+      </div>
+
+      <div class="status-group" id="statusGroup" style="flex:1 1 auto"></div>
+
+      <div class="status-group" id="pacienteGroup" title="Estado global del paciente">
+        <label class="chip" data-patient="gingivitis"><span class="dot" style="background:#f59e0b"></span><span>Gingivitis</span></label>
+        <label class="chip" data-patient="periodontitis"><span class="dot" style="background:#ef4444"></span><span>Periodontitis</span></label>
+      </div>
+
+      <div class="seg" id="segPerioMetric" style="display:none">
+        <button data-metric="PD" class="active" title="Profundidad de sondaje">Profundidad</button>
+        <button data-metric="MG" title="Margen gingival (− hiperplasia / + recesión)">Margen</button>
+        <button data-metric="CAL" title="Nivel de inserción clínica (PD + MG)">CAL</button>
+      </div>
+
+      <div class="io" style="margin-left:auto">
+        <button class="btn toggle" id="btnPerio">Modo Sondaje</button>
+        <button class="btn" id="btnLimpiar">Limpiar</button>
+        <button class="btn" id="btnExport">Exportar JSON</button>
+        <label class="btn secondary" for="jsonFile">Importar JSON</label>
+        <input type="file" id="jsonFile" accept="application/json" style="display:none" />
+      </div>
+    </div>
+
+    <div class="canvas">
+      <svg id="odontograma" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Odontograma FDI"></svg>
+      <div class="footer">
+        <div>
+          <span class="legend-note">Superficies: </span>
+          <span class="legend-note">T (Vestibular), C (Oclusal/Incisal), L (Lingual/Palatino), M (Mesial), D (Distal)</span>
+        </div>
+        <div class="legend-note">Perio: activa «Modo Sondaje». Selector: <b>Profundidad</b> (PD), <b>Margen</b> (MG: negativo = hiperplasia; positivo = recesión) o <b>CAL</b> (PD+MG). Clic = +1 mm, Shift+clic = −1 mm, doble clic = 0. Rango: −12–12 mm (MG) / 0–12 mm (PD/CAL).</div>
+      </div>
+    </div>
+
+    <h3 style="margin:18px 0 8px">Integración</h3>
+    <div class="sub">API: <code>getOdontogramaState()</code> (todo) · <code>getActiveDentitionState()</code> (solo visible) · <code>getPerioSummary()</code> (promedios/peores sitios) · <code>setOdontogramaState(json)</code>. Periodontal: <code>depths</code>, <code>margin</code> y <code>cal</code> (derivado).</div>
+    <textarea id="jsonOutput" placeholder="Aquí verás el JSON exportado..."></textarea>
+  </div>
+
+  <script>
+    // ====== Configuración de estados ======
+    const ESTADOS = [
+      {key:'caries',    label:'Caries',        tipo:'superficie', color:getCss('--caries')},
+      {key:'resina',    label:'Resina',        tipo:'superficie', color:getCss('--resina')},
+      {key:'sellante',  label:'Sellante',      tipo:'superficie', color:getCss('--sellante')},
+      {key:'carilla',   label:'Carilla',       tipo:'superficie', color:getCss('--carilla')},
+      {key:'corona',    label:'Corona',        tipo:'diente',     color:getCss('--corona')},
+      {key:'endodoncia',label:'Endodoncia',    tipo:'diente',     color:getCss('--endo')},
+      {key:'puente',    label:'Puente',        tipo:'diente',     color:getCss('--puente')},
+      {key:'recesion',  label:'Encía retraída',tipo:'diente',     color:getCss('--recesion')},
+      {key:'ausente',   label:'Ausente',       tipo:'diente',     color:getCss('--ausente')},
+      {key:'sano',      label:'Borrar / Sano', tipo:'superficie', color:'transparent'},
+    ];
+
+    let estadoSeleccionado = ESTADOS[0];
+    let perioMode = false;
+    let perioMetric = 'PD'; // 'PD' | 'MG' | 'CAL'
+
+    // ====== Utilidades ======
+    function getCss(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+    function createEl(tag, attrs={}){ const el = document.createElementNS('http://www.w3.org/2000/svg', tag); for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v); return el; }
+
+    // ====== Arreglos FDI ======
+    const adultoSup = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
+    const adultoInf = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+    const temporalSup = [55,54,53,52,51,61,62,63,64,65]; // 10 sup
+    const temporalInf = [85,84,83,82,81,71,72,73,74,75]; // 10 inf
+
+    // ====== Estado interno ======
+    const superficies = ['T','C','L','M','D'];
+
+    function makeTeethMap(nums){
+      const teeth = {}; nums.forEach(n => {
+        teeth[n] = {
+          surfaces:{ T:null, C:null, L:null, M:null, D:null },
+          flags:{ corona:false, endodoncia:false, ausente:false, puente:false, recesion:false }
+        };
+      });
+      return teeth;
+    }
+
+    const state = {
+      dentition: 'adult',
+      patient: { gingivitis:false, periodontitis:false },
+      periodontal: { depths:{}, margin:{} }, // margin: negativo=hiperplasia, positivo=recesión
+      adult: { teeth: { ...makeTeethMap(adultoSup), ...makeTeethMap(adultoInf) } },
+      temporal: { teeth: { ...makeTeethMap(temporalSup), ...makeTeethMap(temporalInf) } },
+    };
+
+    // init periodontal structures
+    function ensurePerioFor(tooth){
+      if(!state.periodontal.depths[tooth]){
+        state.periodontal.depths[tooth] = {MB:0,B:0,DB:0,ML:0,L:0,DL:0};
+      }
+      if(!state.periodontal.margin[tooth]){
+        state.periodontal.margin[tooth] = {MB:0,B:0,DB:0,ML:0,L:0,DL:0};
+      }
+    }
+    [...Object.keys(state.adult.teeth), ...Object.keys(state.temporal.teeth)].forEach(t=>ensurePerioFor(t));
+
+    function currentTeeth(){ return state[state.dentition].teeth; }
+
+    // ====== Chips de estado ======
+    const statusGroup = document.getElementById('statusGroup');
+    function renderEstadoChips(){
+      statusGroup.innerHTML = '';
+      ESTADOS.forEach((s, idx)=>{
+        const chip = document.createElement('label');
+        chip.className = 'chip' + (idx===0?' active':'');
+        chip.dataset.key = s.key;
+        chip.innerHTML = `<span class=\"dot\" style=\"background:${s.color}\"></span><span>${s.label}${s.tipo==='diente'?' (diente)':''}</span>`;
+        chip.addEventListener('click', ()=>{
+          document.querySelectorAll('#statusGroup .chip').forEach(c=>c.classList.remove('active'));
+          chip.classList.add('active');
+          estadoSeleccionado = s;
+        });
+        statusGroup.appendChild(chip);
+      });
+    }
+    renderEstadoChips();
+
+    // ====== Controles paciente ======
+    document.querySelectorAll('[data-patient]').forEach(ch=>{
+      const key = ch.dataset.patient;
+      const sync = ()=> ch.classList.toggle('active', !!state.patient[key]);
+      sync();
+      ch.addEventListener('click', ()=>{ state.patient[key] = !state.patient[key]; sync(); });
+    });
+
+    // ====== Construcción del SVG ======
+    const svg = document.getElementById('odontograma');
+
+    function build(){
+      svg.innerHTML = '';
+      const isAdult = state.dentition==='adult';
+      const filaSup = isAdult ? adultoSup : temporalSup;
+      const filaInf = isAdult ? adultoInf : temporalInf;
+
+      const toothSize = 56;  // tamaño uniforme
+      const gap = 12;        // espacio entre dientes
+      const padX = 16, padY = 40;
+      const cols = filaSup.length; // 16 o 10
+      const width = padX*2 + cols*toothSize + (cols-1)*gap;
+      const height = padY*2 + 2*toothSize + gap + 70; // + espacio para labels
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      // Títulos de cuadrantes
+      const q1 = document.createElementNS(svg.namespaceURI,'text'); q1.setAttribute('class','quadrant'); q1.setAttribute('x', padX+20); q1.setAttribute('y', 14); q1.textContent= isAdult?'Q1':'Q5'; svg.appendChild(q1);
+      const q2 = document.createElementNS(svg.namespaceURI,'text'); q2.setAttribute('class','quadrant'); q2.setAttribute('x', width-40); q2.setAttribute('y', 14); q2.textContent= isAdult?'Q2':'Q6'; svg.appendChild(q2);
+      const q4 = document.createElementNS(svg.namespaceURI,'text'); q4.setAttribute('class','quadrant'); q4.setAttribute('x', padX+20); q4.setAttribute('y', height-6); q4.textContent= isAdult?'Q4':'Q8'; svg.appendChild(q4);
+      const q3 = document.createElementNS(svg.namespaceURI,'text'); q3.setAttribute('class','quadrant'); q3.setAttribute('x', width-40); q3.setAttribute('y', height-6); q3.textContent= isAdult?'Q3':'Q7'; svg.appendChild(q3);
+
+      function addTooth(n, rowIndex, colIndex){
+        const x = padX + colIndex*(toothSize+gap);
+        const y = padY + rowIndex*(toothSize + gap + 50); // 50 para etiqueta
+
+        const g = createEl('g', { id:`tooth-${n}`, 'data-tooth':n, transform:`translate(${x},${y})` });
+
+        // fondo del diente
+        const bg = createEl('rect', { class:'tooth-bg', x:0, y:0, width:toothSize, height:toothSize, rx:10, ry:10 });
+        g.appendChild(bg);
+
+        // grupo de superficies
+        const sGroup = createEl('g', { class:'surfaces' });
+        const s =  toothSize; // shorthand
+        const tPad = 6;       // padding interno
+        const cell = (s - tPad*2)/3; // tamaño de celda base
+
+        const M = createEl('rect', {class:'surface', 'data-surface':'M', x:tPad, y:tPad+cell, width:cell, height:cell, fill:'transparent'});
+        const D = createEl('rect', {class:'surface', 'data-surface':'D', x:tPad+2*cell, y:tPad+cell, width:cell, height:cell, fill:'transparent'});
+        const T = createEl('rect', {class:'surface', 'data-surface':'T', x:tPad+cell, y:tPad, width:cell, height:cell, fill:'transparent'});
+        const L = createEl('rect', {class:'surface', 'data-surface':'L', x:tPad+cell, y:tPad+2*cell, width:cell, height:cell, fill:'transparent'});
+        const C = createEl('rect', {class:'surface', 'data-surface':'C', x:tPad+cell, y:tPad+cell, width:cell, height:cell, fill:'transparent', rx:4, ry:4});
+
+        sGroup.append(M, D, T, L, C); g.appendChild(sGroup);
+
+        // overlays por diente
+        const overlay = createEl('g', {class:'overlay'});
+        const crown = createEl('rect', {class:'corona', x:2, y:2, width:toothSize-4, height:toothSize-4, rx:10, ry:10, style:'display:none'});
+        const endo = createEl('line', {class:'endo', x1:toothSize/2, y1:8, x2:toothSize/2, y2:toothSize-8, style:'display:none'});
+        const x1 = createEl('line', {class:'xline', x1:8, y1:8, x2:toothSize-8, y2:toothSize-8, style:'display:none'});
+        const x2 = createEl('line', {class:'xline', x1:toothSize-8, y1:8, x2:8, y2:toothSize-8, style:'display:none'});
+        const bridge = createEl('line', {class:'bridge', x1:6, y1:6, x2:toothSize-6, y2:6, style:'display:none'});
+        // Recesión: pequeñas marcas en T y L
+        const rec1 = createEl('line', {class:'recession', x1:toothSize/2-6, y1:12, x2:toothSize/2+6, y2:12, style:'display:none'});
+        const rec2 = createEl('line', {class:'recession', x1:toothSize/2-6, y1:toothSize-12, x2:toothSize/2+6, y2:toothSize-12, style:'display:none'});
+        overlay.append(crown, endo, x1, x2, bridge, rec1, rec2);
+        g.appendChild(overlay);
+
+        // etiqueta
+        const labelY = rowIndex===0 ? -6 : toothSize+14;
+        const label = createEl('text', {class:'label', x:toothSize/2, y:labelY});
+        label.textContent = n; g.appendChild(label);
+
+        // Perio dots (6 sitios; el texto cambia según métrica seleccionada)
+        const perio = createEl('g', {class:'perio'});
+        const dotR = 7;
+        const positions = {
+          MB:[tPad+cell/2, tPad-2],
+          B: [tPad+cell*1.5, tPad-2],
+          DB:[tPad+cell*2.5, tPad-2],
+          ML:[tPad+cell/2, tPad+cell*3+2],
+          L: [tPad+cell*1.5, tPad+cell*3+2],
+          DL:[tPad+cell*2.5, tPad+cell*3+2],
+        };
+        const sites = ['MB','B','DB','ML','L','DL'];
+        sites.forEach(site=>{
+          ensurePerioFor(n);
+          const [px,py] = positions[site];
+          const gdot = createEl('g', {class:'perio-site', 'data-site':site, transform:`translate(${px},${py})`});
+          const circle = createEl('circle', {class:'perio-dot', r:dotR, cx:0, cy:0});
+          const text = createEl('text', {class:'perio-text sev-ok', x:0, y:0});
+          text.textContent = getPerioDisplay(n, site);
+          gdot.append(circle, text);
+          // eventos (editan PD o MG según selec.)
+          gdot.addEventListener('click', (ev)=>{
+            ev.stopPropagation();
+            if(perioMetric==='CAL') return; // CAL es derivado
+            let store = perioMetric==='PD' ? state.periodontal.depths : state.periodontal.margin;
+            let v = store[n][site] ?? 0;
+            v = Math.min(12, v + (ev.shiftKey?-1:1));
+            if(v< -12) v=-12; // MG puede ser negativo (hiperplasia)
+            store[n][site] = v;
+            updatePerioSite(n, site, gdot);
+          });
+          gdot.addEventListener('dblclick', (ev)=>{ ev.stopPropagation(); if(perioMetric==='CAL') return; let store = perioMetric==='PD' ? state.periodontal.depths : state.periodontal.margin; store[n][site]=0; updatePerioSite(n, site, gdot); });
+          perio.appendChild(gdot);
+        });
+        g.appendChild(perio);
+
+        // eventos de click sobre superficies/diente
+        g.addEventListener('click', (ev)=>{
+          const target = ev.target;
+          const tnum = g.dataset.tooth;
+
+          if(estadoSeleccionado.tipo==='diente'){
+            toggleToothFlag(tnum, estadoSeleccionado.key);
+            renderTooth(tnum);
+            return;
+          }
+
+          if(target.classList.contains('surface')){
+            const surf = target.dataset.surface;
+            if(estadoSeleccionado.key==='sano'){
+              currentTeeth()[tnum].surfaces[surf] = null;
+            } else {
+              currentTeeth()[tnum].surfaces[surf] = estadoSeleccionado.key;
+            }
+            renderTooth(tnum);
+          }
+        });
+
+        svg.appendChild(g);
+        renderTooth(n);
+      }
+
+      filaSup.forEach((n, i)=> addTooth(n, 0, i));
+      filaInf.forEach((n, i)=> addTooth(n, 1, i));
+
+      // aplicar clase de perio activo
+      svg.classList.toggle('perio-active', perioMode);
+      svg.querySelectorAll('.perio').forEach(p=> p.style.display = perioMode? 'block':'none');
+    }
+
+    function toggleToothFlag(tooth, flag){
+      const t = currentTeeth()[tooth];
+      if(flag==='ausente'){
+        t.flags.ausente = !t.flags.ausente;
+        if(t.flags.ausente){
+          t.flags.corona = false; t.flags.endodoncia = false; t.flags.puente = false; t.flags.recesion = false;
+          for(const k of superficies) t.surfaces[k]=null;
+        }
+      } else if(flag==='corona'){
+        t.flags.corona = !t.flags.corona;
+      } else if(flag==='endodoncia'){
+        t.flags.endodoncia = !t.flags.endodoncia;
+      } else if(flag==='puente'){
+        t.flags.puente = !t.flags.puente;
+      } else if(flag==='recesion'){
+        t.flags.recesion = !t.flags.recesion;
+      }
+    }
+
+    function renderTooth(n){
+      const g = document.getElementById(`tooth-${n}`);
+      const t = currentTeeth()[n];
+
+      // superficies
+      g.querySelectorAll('.surface').forEach(rect=>{
+        const surf = rect.dataset.surface;
+        const val = t.surfaces[surf];
+        const estado = ESTADOS.find(e=>e.key===val);
+        const color = estado ? estado.color : 'transparent';
+        rect.setAttribute('fill', color || 'transparent');
+      });
+
+      // flags
+      const crown = g.querySelector('.corona');
+      const endo = g.querySelector('.endo');
+      const xlines = g.querySelectorAll('.xline');
+      const bridge = g.querySelector('.bridge');
+      const recs = g.querySelectorAll('.recession');
+      const bg = g.querySelector('.tooth-bg');
+
+      crown.style.display = t.flags.corona ? 'block' : 'none';
+      endo.style.display = t.flags.endodoncia ? 'block' : 'none';
+      bridge.style.display = t.flags.puente ? 'block' : 'none';
+      recs.forEach(l=> l.style.display = t.flags.recesion ? 'block' : 'none');
+      xlines.forEach(l=>l.style.display = t.flags.ausente ? 'block' : 'none');
+      g.classList.toggle('ghost', t.flags.ausente);
+      bg.setAttribute('opacity', t.flags.ausente ? '0.6' : '1');
+
+      // actualizar textos de perio del diente
+      g.querySelectorAll('.perio-site').forEach(siteG=>{
+        const site = siteG.dataset.site;
+        updatePerioSite(n, site, siteG);
+      });
+    }
+
+    // ====== Inicializar vista ======
+    build();
+
+    // mostrar/ocultar selector de métrica según modo
+    function syncPerioSelectors(){ document.getElementById('segPerioMetric').style.display = perioMode? 'inline-flex':'none'; }
+    syncPerioSelectors();
+
+    // ====== Botones IO ======
+    document.getElementById('btnLimpiar').addEventListener('click', ()=>{
+      for(const n in currentTeeth()){
+        currentTeeth()[n].flags = {corona:false, endodoncia:false, ausente:false, puente:false, recesion:false};
+        for(const k of superficies) currentTeeth()[n].surfaces[k]=null;
+        ensurePerioFor(n);
+        ['MB','B','DB','ML','L','DL'].forEach(site=>{ state.periodontal.depths[n][site]=0; state.periodontal.margin[n][site]=0; });
+        renderTooth(n);
+      }
+      document.getElementById('jsonOutput').value='';
+    });
+
+    document.getElementById('btnExport').addEventListener('click', ()=>{
+      const snap = getOdontogramaState();
+      const json = JSON.stringify(snap, null, 2);
+      document.getElementById('jsonOutput').value = json;
+      const blob = new Blob([json], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'odontograma_v3.json'; a.click(); URL.revokeObjectURL(a.href);
+    });
+
+    document.getElementById('jsonFile').addEventListener('change', async (e)=>{
+      const file = e.target.files[0]; if(!file) return; const text = await file.text();
+      try{ const obj = JSON.parse(text); setOdontogramaState(obj); document.getElementById('jsonOutput').value = text; }
+      catch(err){ alert('JSON inválido'); }
+      e.target.value = '';
+    });
+
+    // Dentición switch
+    document.querySelectorAll('#segDent button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('#segDent button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        state.dentition = btn.dataset.den;
+        build();
+      });
+    });
+
+    // Modo Sondaje
+    document.getElementById('btnPerio').addEventListener('click', (ev)=>{
+      perioMode = !perioMode;
+      ev.currentTarget.classList.toggle('active', perioMode);
+      svg.classList.toggle('perio-active', perioMode);
+      svg.querySelectorAll('.perio').forEach(p=> p.style.display = perioMode? 'block':'none');
+      syncPerioSelectors();
+    });
+
+    // Selector de métrica periodontal
+    document.querySelectorAll('#segPerioMetric button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('#segPerioMetric button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        perioMetric = btn.dataset.metric;
+        // refrescar textos/colores en todos los sitios
+        document.querySelectorAll('.perio-site').forEach(siteG=>{
+          const tooth = siteG.closest('g[id^="tooth-"]').dataset.tooth;
+          const site = siteG.dataset.site;
+          updatePerioSite(tooth, site, siteG);
+        });
+      });
+    });
+
+    // ====== Perio helpers ======
+    function getPerioDisplay(tooth, site){
+      const pd = state.periodontal.depths[tooth]?.[site] ?? 0;
+      const mg = state.periodontal.margin[tooth]?.[site] ?? 0; // negativo=hiperplasia, positivo=recesión
+      const cal = Math.max(0, Math.min(20, (pd||0) + (mg||0)));
+      if(perioMetric==='PD') return pd;
+      if(perioMetric==='MG') return mg;
+      return cal;
+    }
+
+    function updatePerioSite(tooth, site, siteG){
+      const text = siteG.querySelector('.perio-text');
+      const val = getPerioDisplay(tooth, site);
+      text.textContent = val;
+      // color severidad
+      let cls = 'sev-ok';
+      if(perioMetric==='PD'){
+        if(val>=6) cls='sev-high'; else if(val>=4) cls='sev-mid'; else cls='sev-ok';
+      } else if(perioMetric==='CAL'){
+        if(val>=5) cls='sev-high'; else if(val>=3) cls='sev-mid'; else cls='sev-ok';
+      } else {
+        cls='sev-ok';
+      }
+      text.setAttribute('class', 'perio-text '+cls);
+    }
+
+    function computeCAL(){
+      const out = {};
+      const allTeeth = [...Object.keys(state.adult.teeth), ...Object.keys(state.temporal.teeth)];
+      allTeeth.forEach(t=>{
+        const sites = ['MB','B','DB','ML','L','DL'];
+        out[t] = {};
+        sites.forEach(s=>{ const pd = state.periodontal.depths[t]?.[s] ?? 0; const mg = state.periodontal.margin[t]?.[s] ?? 0; out[t][s] = Math.max(0, Math.min(20, (pd||0) + (mg||0))); });
+      });
+      return out;
+    }
+
+    function computePerioSummary(){
+      const cal = computeCAL();
+      const sum = { teeth:{} };
+      function avg(arr){ return arr.length? +(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2) : 0; }
+      const sites = ['MB','B','DB','ML','L','DL'];
+      const allTeeth = Object.keys(currentTeeth());
+      allTeeth.forEach(t=>{
+        const pdVals = sites.map(s=> state.periodontal.depths[t]?.[s] ?? 0);
+        const calVals = sites.map(s=> cal[t]?.[s] ?? 0);
+        sum.teeth[t] = {
+          pd_avg: avg(pdVals), cal_avg: avg(calVals),
+          pd_max: Math.max(...pdVals), cal_max: Math.max(...calVals),
+        };
+      });
+      // totales dentición activa
+      const pdAll = [].concat(...allTeeth.map(t=> sites.map(s=> state.periodontal.depths[t]?.[s] ?? 0)));
+      const calAll = [].concat(...allTeeth.map(t=> sites.map(s=> cal[t]?.[s] ?? 0)));
+      sum.active = { pd_avg: avg(pdAll), cal_avg: avg(calAll), pd_max: Math.max(...pdAll), cal_max: Math.max(...calAll) };
+      return sum;
+    }
+
+    // ====== API pública ======
+    window.getOdontogramaState = function(){
+      // incluir CAL derivado para comodidad
+      const snapshot = JSON.parse(JSON.stringify(state));
+      snapshot.periodontal.cal = computeCAL();
+      return snapshot;
+    }
+    window.getActiveDentitionState = function(){ return JSON.parse(JSON.stringify(state[state.dentition])); }
+    window.getPerioSummary = function(){ return computePerioSummary(); }
+    window.setOdontogramaState = function(newState){ setOdontogramaState(newState); }
+
+    function setOdontogramaState(newState){
+      if(!newState) return;
+      // Merge superficial
+      if(newState.dentition) state.dentition = newState.dentition;
+      if(newState.patient) state.patient = { ...state.patient, ...newState.patient };
+      if(newState.periodontal){
+        if(newState.periodontal.depths){ state.periodontal.depths = { ...state.periodontal.depths, ...newState.periodontal.depths }; }
+        if(newState.periodontal.margin){ state.periodontal.margin = { ...state.periodontal.margin, ...newState.periodontal.margin }; }
+      }
+      ['adult','temporal'].forEach(den=>{
+        if(newState[den]?.teeth){
+          for(const n in newState[den].teeth){
+            if(!state[den].teeth[n]) continue;
+            const t = newState[den].teeth[n];
+            state[den].teeth[n].flags = {
+              corona: !!t.flags?.corona,
+              endodoncia: !!t.flags?.endodoncia,
+              ausente: !!t.flags?.ausente,
+              puente: !!t.flags?.puente,
+              recesion: !!t.flags?.recesion,
+            };
+            for(const k of superficies){ state[den].teeth[n].surfaces[k] = t.surfaces?.[k] || null; }
+            ensurePerioFor(n);
+          }
+        }
+      });
+      // refrescar
+      build();
+    }
+  </script>
+</body>
+</html>
