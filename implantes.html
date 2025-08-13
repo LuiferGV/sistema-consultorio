@@ -8,13 +8,10 @@
   <link rel="icon" type="image/png" href="favicon.png"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-  <!-- Reusa tu look & feel -->
   <link href="styles.css" rel="stylesheet">
-  <!-- Estilos propios del módulo -->
   <link href="implantes.css" rel="stylesheet">
 </head>
 <body>
-  <!-- Header -->
   <header class="app-header">
     <div class="container header-inner">
       <div class="brand">
@@ -22,9 +19,26 @@
         <h1 class="brand-title">Módulo de Implantes</h1>
       </div>
       <div class="header-actions">
-        <a href="index.html" class="btn btn-outline-light">
-          <i class="fa-solid fa-tooth me-1"></i> Periodoncia
-        </a>
+        <button id="btnDash" class="btn btn-outline-light">
+          <i class="fa-solid fa-chart-line me-1"></i> Dashboard
+        </button>
+
+        <!-- MÓDULOS (reemplaza al botón directo de Periodoncia) -->
+        <div class="btn-group">
+          <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="opacity:.7;">
+            <i class="fa-solid fa-layer-group me-1"></i> Módulos
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <!-- Ajustá la ruta si corresponde -->
+            <li>
+              <a class="dropdown-item" href="index.html">
+                <i class="fa-solid fa-tooth me-2"></i> Periodoncia
+              </a>
+            </li>
+          </ul>
+        </div>
+        <!-- /MÓDULOS -->
+
         <span id="userEmail" class="user-email d-none ms-2 me-2"></span>
         <button id="btnLogout" class="btn btn-outline-light d-none">
           <i class="fa-solid fa-right-from-bracket me-1"></i> Salir
@@ -36,7 +50,7 @@
     </div>
   </header>
 
-  <!-- AUTH OVERLAY -->
+  <!-- Overlay de login -->
   <div id="authOverlay" class="auth-overlay" style="display:flex;">
     <div class="auth-card">
       <div class="text-center mb-3">
@@ -67,71 +81,61 @@
       <div id="authError" class="alert alert-danger py-2 d-none"></div>
 
       <button id="btnLogin" class="btn btn-brand w-100 mt-1">Ingresar</button>
-      <div class="mt-3 small text-muted text-center">
-        Solo usuarios autorizados.
-      </div>
+      <div class="mt-3 small text-muted text-center">Solo usuarios autorizados.</div>
     </div>
   </div>
 
-  <!-- Main -->
   <main class="container py-4">
-    <!-- Buscador -->
     <div class="mb-3">
       <input id="searchMain" class="form-control search" placeholder="Buscar paciente por nombre o teléfono" autocomplete="off" />
     </div>
 
-    <!-- Barra A–Z -->
+    <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+      <div id="filterImpl" class="d-flex align-items-center gap-2">
+        <span class="filter-label">Implante:</span>
+        <button class="btn btn-chip btn-outline-success" data-impl="tardio">Tardío</button>
+        <button class="btn btn-chip btn-outline-danger"  data-impl="inmediato">Inmediato</button>
+      </div>
+      <div id="filterRec" class="d-flex align-items-center gap-2">
+        <span class="filter-label">Recordatorio:</span>
+        <button class="btn btn-chip btn-outline-light" data-rec="proximos">Próximos</button>
+        <button class="btn btn-chip btn-outline-light" data-rec="lejanos">Lejanos</button>
+      </div>
+    </div>
+
     <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
       <span class="filter-label">Inicial:</span>
       <div id="alphaBar" class="d-flex flex-wrap gap-1">
         <button type="button" class="btn btn-sm btn-outline-secondary" data-alpha="">Todos</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="a">A</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="b">B</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="c">C</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="d">D</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="e">E</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="f">F</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="g">G</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="h">H</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="i">I</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="j">J</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="k">K</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="l">L</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="m">M</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="n">N</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="o">O</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="p">P</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="q">Q</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="r">R</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="s">S</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="t">T</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="u">U</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="v">V</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="w">W</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="x">X</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="y">Y</button>
-        <button class="btn btn-sm btn-outline-secondary" data-alpha="z">Z</button>
+        <button class="btn btn-sm btn-outline-secondary" data-alpha="a">A</button><button class="btn btn-sm btn-outline-secondary" data-alpha="b">B</button><button class="btn btn-sm btn-outline-secondary" data-alpha="c">C</button><button class="btn btn-sm btn-outline-secondary" data-alpha="d">D</button><button class="btn btn-sm btn-outline-secondary" data-alpha="e">E</button><button class="btn btn-sm btn-outline-secondary" data-alpha="f">F</button><button class="btn btn-sm btn-outline-secondary" data-alpha="g">G</button><button class="btn btn-sm btn-outline-secondary" data-alpha="h">H</button><button class="btn btn-sm btn-outline-secondary" data-alpha="i">I</button><button class="btn btn-sm btn-outline-secondary" data-alpha="j">J</button><button class="btn btn-sm btn-outline-secondary" data-alpha="k">K</button><button class="btn btn-sm btn-outline-secondary" data-alpha="l">L</button><button class="btn btn-sm btn-outline-secondary" data-alpha="m">M</button><button class="btn btn-sm btn-outline-secondary" data-alpha="n">N</button><button class="btn btn-sm btn-outline-secondary" data-alpha="o">O</button><button class="btn btn-sm btn-outline-secondary" data-alpha="p">P</button><button class="btn btn-sm btn-outline-secondary" data-alpha="q">Q</button><button class="btn btn-sm btn-outline-secondary" data-alpha="r">R</button><button class="btn btn-sm btn-outline-secondary" data-alpha="s">S</button><button class="btn btn-sm btn-outline-secondary" data-alpha="t">T</button><button class="btn btn-sm btn-outline-secondary" data-alpha="u">U</button><button class="btn btn-sm btn-outline-secondary" data-alpha="v">V</button><button class="btn btn-sm btn-outline-secondary" data-alpha="w">W</button><button class="btn btn-sm btn-outline-secondary" data-alpha="x">X</button><button class="btn btn-sm btn-outline-secondary" data-alpha="y">Y</button><button class="btn btn-sm btn-outline-secondary" data-alpha="z">Z</button>
       </div>
     </div>
 
-    <!-- Tabla -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Total</span><span id="kpiTotal" class="kpi">0</span></div></div></div>
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Próx. Coronas</span><span id="kpiConCorona" class="kpi">0</span></div></div></div>
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Próx. 7 días</span><span id="kpiProx7" class="kpi">0</span></div></div></div>
+      <div class="col-6 col-md-3"><div class="card card-kpi"><div class="card-body d-flex justify-content-between"><span class="label">Vencidos</span><span id="kpiVencidos" class="kpi">0</span></div></div></div>
+    </div>
+
     <div class="table-responsive">
       <table class="table table-hover align-middle" id="tablaPacientes">
         <thead>
           <tr>
             <th>Nombre</th>
             <th>Celular</th>
-            <th>Implantes</th>
+            <th>Implante</th>
+            <th>No. Implantes</th>
             <th>Próx. Corona</th>
             <th style="width:260px;">Acciones</th>
           </tr>
         </thead>
-        <tbody><!-- filas dinámicas --></tbody>
+        <tbody></tbody>
       </table>
     </div>
   </main>
 
-  <!-- Modal Agregar (Paciente + 1er Implante) -->
+  <!-- Modal Paciente -->
   <div class="modal fade" id="modalPaciente" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
@@ -140,61 +144,67 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <form id="formPaciente" autocomplete="off" class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Nombre</label>
-              <input type="text" class="form-control" id="nombre" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Celular</label>
-              <div class="input-group">
-                <span class="input-group-text">595</span>
-                <input type="tel" class="form-control" id="celular" placeholder="Ej.: 981885999" inputmode="numeric" required>
+          <form id="formPaciente" autocomplete="off">
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label class="form-label">Nombre</label>
+                <input type="text" class="form-control" id="nombre" required>
               </div>
-              <div class="form-text">Escribe el número <b>sin 0 ni 595</b>. Ej.: 981885999.</div>
+              <div class="col-md-6">
+                <label class="form-label">Celular (sin 595)</label>
+                <input type="tel" class="form-control" id="celular" placeholder="ej: 981234567" required>
+              </div>
             </div>
 
-            <div class="col-md-4">
-              <label class="form-label">Fecha cirugía</label>
-              <input type="date" class="form-control" id="fechaCirugia" required>
+            <hr class="my-3">
+
+            <div class="row g-2">
+              <div class="col-md-2">
+                <label class="form-label">Diente (FDI)</label>
+                <input type="number" class="form-control" id="dienteFDI" min="11" max="85" required>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Tipo</label>
+                <select class="form-select" id="tipoImplante">
+                  <option value="inmediato">Inmediato</option>
+                  <option value="tardio">Tardío</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Implante — Sistema</label>
+                <select id="sistemaImpl" class="form-select">
+                  <option value="epikut_s">Epikut S — S.I.N.</option>
+                  <option value="epikut_s_plus">Epikut S Plus — S.I.N.</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Código</label>
+                <select id="codigoImpl" class="form-select"></select>
+              </div>
             </div>
 
-            <div class="col-md-4">
-              <label class="form-label">Diente (FDI)</label>
-              <input type="number" class="form-control" id="dienteFDI" placeholder="p.ej. 11" min="11" max="85" required>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Tipo de implante</label>
-              <select class="form-select" id="tipoImplante" required>
-                <option value="inmediato">Inmediato</option>
-                <option value="tardio">Tardío</option>
-              </select>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Implante (marca/modelo ØxL)</label>
-              <input type="text" class="form-control" id="implante" placeholder="Ej.: Marca X Ø4.0 x 11.5">
-            </div>
-
-            <div class="col-md-3">
-              <label class="form-label">Torque (N·cm)</label>
-              <input type="number" class="form-control" id="torque" min="0" max="100" step="1" placeholder="Ej.: 35">
-            </div>
-
-            <div class="col-md-3">
-              <label class="form-label">Corona en</label>
-              <select class="form-select" id="frecCorona" required>
-                <option value="3">3 meses</option>
-                <option value="6">6 meses</option>
-                <option value="9">9 meses</option>
-              </select>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Fecha de corona (calculada)</label>
-              <input type="text" class="form-control" id="fechaCoronaDDMMAAAA" readonly>
-              <input type="hidden" id="fechaCoronaISO">
+            <div class="row g-2 mt-1">
+              <div class="col-md-2">
+                <label class="form-label">Torque (N·cm)</label>
+                <input type="number" class="form-control" id="torque" min="0" max="100" step="1">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fecha cirugía</label>
+                <input type="date" class="form-control" id="fechaCirugia" required>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Corona</label>
+                <select class="form-select" id="frecCorona">
+                  <option value="3">3m</option>
+                  <option value="6">6m</option>
+                  <option value="9">9m</option>
+                </select>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Fecha cor. (auto)</label>
+                <input type="text" class="form-control" id="fechaCoronaDDMMAAAA" readonly>
+                <input type="hidden" id="fechaCoronaISO">
+              </div>
             </div>
           </form>
         </div>
@@ -206,7 +216,7 @@
     </div>
   </div>
 
-  <!-- Modal FICHA (ver + agregar implantes) -->
+  <!-- Modal Ficha -->
   <div class="modal fade" id="modalFicha" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
@@ -219,20 +229,92 @@
           <div class="row g-3 mb-3">
             <div class="col-md-6">
               <div class="list-group">
-                <div class="list-group-item d-flex justify-content-between">
-                  <span class="fw-semibold">Nombre</span><span id="fNombre"></span>
-                </div>
+                <div class="list-group-item d-flex justify-content-between"><span class="fw-semibold">Nombre</span><span id="fNombre"></span></div>
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                   <span class="fw-semibold">Celular</span>
-                  <span>
-                    <span id="fCelular"></span>
-                    <a id="fWhats" class="btn btn-success btn-sm ms-2" target="_blank" rel="noopener" title="WhatsApp">
-                      <i class="fa-brands fa-whatsapp"></i>
-                    </a>
-                  </span>
+                  <span><span id="fCelular"></span><a id="fWhats" class="btn btn-success btn-sm ms-2" target="_blank" rel="noopener" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a></span>
                 </div>
-                <div class="list-group-item d-flex justify-content-between">
-                  <span class="fw-semibold">Implantes</span><span id="fCount"></span>
+                <div class="list-group-item d-flex justify-content-between"><span class="fw-semibold">Implantes</span><span id="fCount"></span></div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card card-fin">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                  <span class="fw-bold">Cuenta del paciente</span>
+                  <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="card-body">
+                  <div class="fin-summary mb-2">
+                    <div class="fin-item">
+                      <div class="label small">Total</div>
+                      <div id="finTotalLbl" class="money">Gs. —</div>
+                    </div>
+                    <div class="fin-item">
+                      <div class="label small">Pagado</div>
+                      <div id="finPagadoLbl" class="money">Gs. —</div>
+                    </div>
+                    <div class="fin-item">
+                      <div class="label small">Saldo</div>
+                      <div id="finSaldoLbl" class="money">Gs. —</div>
+                    </div>
+                  </div>
+
+                  <div class="mb-2">
+                    <button id="btnEditTotal" type="button" class="btn btn-outline-light btn-sm">
+                      <i class="fa-regular fa-pen-to-square me-1"></i> Editar total
+                    </button>
+                  </div>
+
+                  <div id="finEditorRow" class="row g-2 align-items-end d-none">
+                    <div class="col-md-7">
+                      <label class="form-label">Total (Gs.)</label>
+                      <input id="finTotalInput" type="text" class="form-control" placeholder="p.ej. 2500000" inputmode="numeric">
+                    </div>
+                    <div class="col-md-5 d-flex gap-2">
+                      <button id="finGuardarTotal" type="button" class="btn btn-brand w-100">
+                        <i class="fa-regular fa-floppy-disk me-1"></i> Guardar
+                      </button>
+                      <button id="btnCancelarTotal" type="button" class="btn btn-outline-light w-100">Cancelar</button>
+                    </div>
+                  </div>
+
+                  <hr class="my-2">
+
+                  <div class="mt-2 small text-muted">Registrar pago</div>
+                  <div class="row g-2 align-items-end">
+                    <div class="col-lg-2 col-md-4">
+                      <label class="form-label">Fecha</label>
+                      <input id="finFechaPago" type="date" class="form-control">
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                      <label class="form-label">Monto (Gs.)</label>
+                      <input id="finMontoPago" type="text" class="form-control" placeholder="p.ej. 1000000" inputmode="numeric">
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                      <label class="form-label">Método</label>
+                      <select id="finMetodoPago" class="form-select">
+                        <option value="efectivo" selected>Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                      </select>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                      <label class="form-label">No. comprobante</label>
+                      <input id="finNroComp" type="text" class="form-control" placeholder="opcional">
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                      <label class="form-label">Obs.</label>
+                      <input id="finObs" type="text" class="form-control" placeholder="opcional">
+                    </div>
+                    <div class="col-12">
+                      <button id="finAgregarPago" type="button" class="btn btn-brand mt-1">
+                        <i class="fa-solid fa-circle-plus me-1"></i> Agregar pago
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 small text-muted">Movimientos</div>
+                  <div id="finPagosList" class="list-group"></div>
                 </div>
               </div>
             </div>
@@ -253,19 +335,26 @@
                 <option value="tardio">Tardío</option>
               </select>
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Implante</label>
-              <input type="text" id="iImplante" class="form-control" placeholder="Marca ØxL">
+            <div class="col-md-4">
+              <label class="form-label">Implante — Sistema</label>
+              <select id="iSistema" class="form-select">
+                <option value="epikut_s">Epikut S — S.I.N.</option>
+                <option value="epikut_s_plus">Epikut S Plus — S.I.N.</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Código</label>
+              <select id="iCodigo" class="form-select"></select>
             </div>
             <div class="col-md-2">
               <label class="form-label">Torque</label>
               <input type="number" id="iTorque" class="form-control" min="0" max="100" step="1">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
               <label class="form-label">Fecha cirugía</label>
               <input type="date" id="iFecha" class="form-control" required>
             </div>
-            <div class="col-md-1">
+            <div class="col-md-2">
               <label class="form-label">Corona</label>
               <select id="iFrec" class="form-select">
                 <option value="3">3m</option>
@@ -288,8 +377,35 @@
     </div>
   </div>
 
-  <!-- JS -->
+  <!-- Modal Dashboard -->
+  <div class="modal fade" id="modalFinDash" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Dashboard financiero — Implantes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3"><div class="card card-kpi kpi-small"><div class="card-body d-flex justify-content-between"><span class="label">Total montos</span><span id="fdTotalGeneral" class="kpi">Gs. 0</span></div></div></div>
+            <div class="col-6 col-md-3"><div class="card card-kpi kpi-small"><div class="card-body d-flex justify-content-between"><span class="label">Ingresos año</span><span id="fdIngresosAnio" class="kpi">Gs. 0</span></div></div></div>
+            <div class="col-6 col-md-3"><div class="card card-kpi kpi-small"><div class="card-body d-flex justify-content-between"><span class="label">Pagado total</span><span id="fdPagadoTotal" class="kpi">Gs. 0</span></div></div></div>
+            <div class="col-6 col-md-3"><div class="card card-kpi kpi-small"><div class="card-body d-flex justify-content-between"><span class="label">Saldo acumulado</span><span id="fdSaldoGeneral" class="kpi">Gs. 0</span></div></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header">Ingresos por mes (año actual)</div>
+            <div class="card-body chart-wrap">
+              <canvas id="chartIngresos"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script type="module" src="implantes.js"></script>
 </body>
 </html>

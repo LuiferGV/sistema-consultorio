@@ -1,24 +1,124 @@
-/* Ajustes mínimos para el módulo Implantes (reusa styles.css para el look general) */
+/* Implantes — estilos */
 
-.btn-eye{
-  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-  border: 0; color: #0b0f12;
-  box-shadow: 0 8px 22px rgba(34,197,94,.35);
+:root{
+  --border:#1f2a33; --card:#0f171b; --text:#e6eff4; --ring:0 10px 30px rgba(0,0,0,.25);
+  --amber1:#f59e0b; --amber2:#d97706;
+  --blue1:#3b82f6;  --blue2:#2563eb;
+  --dblue1:#1e40af; --dblue2:#1d4ed8;
+  --red1:#ef4444;   --red2:#dc2626;
+  --wa1:#25d366;    --wa2:#16a34a;
 }
-.btn-eye:hover{ filter: brightness(.95); }
 
-.auth-overlay{
-  position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
-  background: radial-gradient(1000px 500px at 50% -10%, rgba(218,135,58,.08), transparent 60%), rgba(0,0,0,.6);
-  backdrop-filter: blur(4px);
-  z-index: 2000;
+/* chips/labels del listado */
+.pill{
+  display:inline-block; padding:.18rem .6rem; border-radius:999px;
+  font-weight:600; font-size:.875rem; line-height:1; border:1px solid transparent;
 }
-.auth-card{
-  width: 100%; max-width: 380px;
-  background: #0f171b; border: 1px solid #1c272d; border-radius: 18px;
-  box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 18px;
-}
-.auth-link{ color:#93c5fd; text-decoration: none; }
-.auth-link:hover{ text-decoration: underline; }
+.pill-none{ color:#9aaab4; background:rgba(148,163,184,.15); border-color:rgba(148,163,184,.35); }
+.pill-inm { color:#16a34a; background:rgba(34,197,94,.12);  border-color:rgba(34,197,94,.35); }
+.pill-tar { color:#ef4444; background:rgba(239,68,68,.12);  border-color:rgba(239,68,68,.35); }
+.pill-mix { color:#f59e0b; background:rgba(245,158,11,.12); border-color:rgba(245,158,11,.35); }
 
+/* botones “badge” */
+.btn-badge{
+  width:36px; height:36px; border-radius:12px; border:none; padding:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  box-shadow:0 8px 20px rgba(0,0,0,.25); transition:filter .15s ease, transform .05s ease;
+}
+.btn-badge i{ font-size:1rem; }
+.btn-badge:hover{ filter:brightness(.95); }
+.btn-badge:active{ transform:translateY(1px); }
+a.btn-badge{ text-decoration:none !important; }
+
+/* paletas */
+.badge-amber{ background:linear-gradient(180deg,var(--amber1),var(--amber2)); color:#0b0f12; }
+.badge-blue { background:linear-gradient(180deg,var(--blue1), var(--blue2));  color:#fff; }
+.badge-dblue{ background:linear-gradient(180deg,var(--dblue1),var(--dblue2)); color:#fff; }
+.badge-red  { background:linear-gradient(180deg,var(--red1),  var(--red2));   color:#fff; }
+.badge-wa   { background:linear-gradient(180deg,var(--wa1),  var(--wa2));    color:#fff; }
+
+/* filtros */
 .filter-label{ color:#c7d0d6; font-weight:600; }
+.btn-chip{ border-radius:999px; padding:.25rem .75rem; }
+.btn-chip.active{ filter:brightness(1.05); box-shadow:0 6px 16px rgba(0,0,0,.2); }
+
+/* KPIs (cards superiores) */
+.card-kpi{ background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--ring); }
+.card-kpi .card-body{ color:#cfe6ef; }
+.card-kpi .label{ color:#c7d0d6; }
+.card-kpi .kpi{ font-weight:800; }
+
+/* =========================
+   DASHBOARD (modal)
+   — Ajustes anti-desborde —
+   ========================= */
+#modalFinDash .kpi{          /* títulos dentro del cuadro */
+  white-space:normal;         /* antes: nowrap -> provocaba desbordes */
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  font-size:clamp(.9rem,1vw + .55rem,1rem);
+  line-height:1.2;
+}
+#fdTotalGeneral,
+#fdIngresosAnio,
+#fdPagadoTotal,
+#fdSaldoGeneral{             /* valores grandes */
+  display:block;
+  font-weight:800;
+  font-size:clamp(1rem,1.2vw + .6rem,1.55rem);
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  line-height:1.15;
+  max-width:100%;
+}
+#modalFinDash .mini-kpi{     /* el contenedor de cada cajita */
+  min-height:92px;
+  display:flex; flex-direction:column; justify-content:center;
+}
+#modalFinDash .chart-wrap{ position:relative; height:380px; }
+@media (max-width:1200px){
+  #modalFinDash .chart-wrap{ height:320px; }
+}
+@media (max-width:768px){
+  #modalFinDash .chart-wrap{ height:260px; }
+}
+
+/* Ficha > finanzas (bloque Total/Pagado/Saldo) */
+.card-fin{ background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--ring); }
+.card-fin .card-header{ background:#0f161a; color:#dbe5ea; border-bottom:1px solid var(--border); font-weight:700; letter-spacing:.2px; }
+.card-fin .label{ color:#e6eff4!important; opacity:1; }
+.fin-summary{ display:grid!important; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+@media (max-width:1200px){ .fin-summary{ grid-template-columns:1fr!important; } }
+.fin-item .money{ font-weight:800; font-size:clamp(1rem,1.2vw+.75rem,1.4rem); line-height:1.15; white-space:normal; overflow-wrap:anywhere; word-break:break-word; display:block; }
+#finTotalLbl{ color:#f59e0b; } #finPagadoLbl{ color:#22c55e; } #finSaldoLbl{ color:#ef4444; } .money-zero{ color:#22c55e!important; }
+
+/* Formularios */
+#formImplante .form-label, #formPaciente .form-label{ white-space:nowrap; }
+
+/* overlay login */
+.auth-overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: radial-gradient(1000px 500px at 50% -10%, rgba(218,135,58,.08), transparent 60%), rgba(0,0,0,.6); backdrop-filter: blur(4px); z-index:2000; }
+.auth-card{ width:100%; max-width:380px; background:#0f171b; border:1px solid var(--border); border-radius:18px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:18px; }
+.auth-link{ color:#93c5fd; text-decoration:none; } .auth-link:hover{ text-decoration:underline; }
+
+/* =========================
+   Link a Periodoncia (discreto)
+   ========================= */
+#modulesMenu .btn-modulos{
+  --tw: rgba(255,255,255,.08);
+  color:#c7d0d6;
+  border:1px solid var(--border);
+  background:linear-gradient(180deg,#0f171b,#0b1216);
+  padding:.35rem .6rem; font-size:.85rem; border-radius:10px;
+}
+#modulesMenu .btn-modulos i{ opacity:.85; }
+#modulesMenu .dropdown-menu{
+  background:#0f171b; border:1px solid var(--border);
+}
+#modulesMenu .dropdown-item{
+  color:#d6e3ea;
+}
+#modulesMenu .dropdown-item:hover{
+  background:rgba(245,158,11,.08);
+  color:#fff;
+}
